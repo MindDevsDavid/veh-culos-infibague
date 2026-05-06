@@ -1,141 +1,279 @@
-# Almacén de Vehículos (CTV)
+# Sistema de Control de Vehículos — INFIbagué (CTV)
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green?style=flat&logo=node.js)](https://nodejs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?style=flat&logo=typescript)](https://www.typescriptlang.org)
-[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react)](https://react.dev)
-[![Prisma](https://img.shields.io/badge/Prisma-5.22-2D3748?style=flat&logo=prisma)](https://www.prisma.io)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat&logo=mysql)](https://www.mysql.com)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Activo-brightgreen)](https://github.com/ctv-proyecto/almacen-vehiculos)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=flat&logo=typescript)](https://www.typescriptlang.org)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react)](https://react.dev)
+[![MySQL](https://img.shields.io/badge/MySQL-5.0.51b-4479A1?style=flat&logo=mysql)](https://www.mysql.com)
+[![Status](https://img.shields.io/badge/Status-Activo-brightgreen)](#)
 
-> Sistema de gestión de flota vehicular para el control de entradas, salidas, mantenimientos, inspecciones y requisitos legales de vehículos.
+> Sistema web para gestión de flota vehicular: solicitudes de salida, inspecciones preoperacionales/postoperacionales, mantenimiento, requisitos documentales y control de portería.
 
 ## Tabla de Contenidos
 
-1. [Capturas de Pantalla](#capturas-de-pantalla)
-2. [Características](#características)
-3. [Tecnologías](#tecnologías)
-4. [Estructura del Proyecto](#estructura-del-proyecto)
-5. [Roles de Usuario](#roles-de-usuario)
-6. [API Endpoints](#api-endpoints)
-7. [Instalación](#instalación)
-8. [Variables de Entorno](#variables-de-entorno)
-9. [Scripts Disponibles](#scripts-disponibles)
-10. [Funcionalidades Principales](#funcionalidades-principales)
-11. [Contribución](#contribución)
-12. [Licencia](#licencia)
+1. [Características](#características)
+2. [Stack tecnológico](#stack-tecnológico)
+3. [Roles de usuario](#roles-de-usuario)
+4. [Flujo de un viaje](#flujo-de-un-viaje)
+5. [Estructura del proyecto](#estructura-del-proyecto)
+6. [Instalación](#instalación)
+7. [Variables de entorno](#variables-de-entorno)
+8. [Levantar en desarrollo](#levantar-en-desarrollo)
+9. [Acceso desde red local LAN](#acceso-desde-red-local-lan)
+10. [API Endpoints](#api-endpoints)
+11. [Scripts disponibles](#scripts-disponibles)
+12. [Consideraciones técnicas](#consideraciones-técnicas)
 13. [FAQ](#faq)
 
-## Capturas de Pantalla
-
-| Dashboard | Gestión de Vehículos |
-|-----------|---------------------|
-| ![Dashboard](https://placehold.co/600x400/1e293b/ffffff?text=Dashboard+CTV) | ![Vehículos](https://placehold.co/600x400/1e293b/ffffff?text=Gestión+Vehículos) |
-
-| Registro de Salidas | Inspecciones |
-|---------------------|---------------|
-| ![Salidas](https://placehold.co/600x400/1e293b/ffffff?text=Registro+de+Salidas) | ![Inspecciones](https://placehold.co/600x400/1e293b/ffffff?text=Inspecciones) |
-
-*[Agrega capturas reales del proyecto en la carpeta `docs/screenshots/`]*
+---
 
 ## Características
 
-- ✅ Gestión completa de vehículos (CRUD)
-- ✅ Control de conductores y licencias
-- ✅ Registro de salidas y entradas con fotografías
-- ✅ Inspecciones pre y post operacionales
-- ✅ Control de mantenimientos preventivos y correctivos
-- ✅ Gestión de requisitos legales (SOAT, tecnomecánica, pólizas)
-- ✅ Control de tanqueos de combustible
-- ✅ Sistema de chips de rastreo GPS
-- ✅ Historial de uso y kilometraje
-- ✅ Carga de documentos PDF y fotos
-- ✅ Panel de estadísticas y reportes
-- ✅ Autenticación y autorización por roles
+- Gestión completa de vehículos (CRUD)
+- Control de conductores, licencias y autorización TH
+- Solicitudes de salida con aprobación por autorizador
+- Inspecciones pre y postoperacionales con checklist completo
+- Control de mantenimientos preventivos y correctivos
+- Gestión de requisitos legales (SOAT, tecnomecánica, pólizas) con alertas de vencimiento
+- Control de tanqueos de combustible
+- Sistema de chips de rastreo GPS
+- Historial de uso y kilometraje por viaje
+- Carga de fotografías en check de salida/entrada
+- Carga de documentos PDF para requisitos
+- Panel de estadísticas en dashboard
+- Autenticación JWT con refresh tokens (cookies HttpOnly)
+- Diseño responsive: funciona en desktop, tablet y móvil
 
-## Tecnologías
+---
+
+## Stack tecnológico
 
 ### Backend
 
-| Tecnología | Propósito |
-|------------|-----------|
-| **Node.js** | Entorno de ejecución |
-| **Express** | Framework web REST API |
-| **TypeScript** | Tipado estático |
-| **Prisma ORM** | Acceso a base de datos |
-| **MySQL 8.0** | Base de datos relacional |
-| **JWT** | Autenticación stateless |
-| **bcryptjs** | Hashing de contraseñas |
-| **Multer** | Manejo de archivos |
-| **node-cron** | Tareas programadas |
-| **CORS** | Cross-Origin Resource Sharing |
+| Tecnología | Versión | Propósito |
+|------------|---------|-----------|
+| Node.js | 18+ | Entorno de ejecución |
+| Express | 4.x | Framework web REST API |
+| TypeScript | 5.x | Tipado estático |
+| mysql2/promise | 3.x | Acceso a BD (raw SQL — Prisma no soporta MySQL 5.x) |
+| JWT | — | Autenticación con access + refresh tokens |
+| bcryptjs | — | Hashing de contraseñas |
+| Multer | — | Manejo de archivos (fotos, PDFs) |
+| node-cron | — | Tarea diaria para marcar requisitos vencidos |
 
 ### Frontend
 
-| Tecnología | Propósito |
-|------------|-----------|
-| **React 19** | Biblioteca UI |
-| **TypeScript** | Tipado estático |
-| **Vite** | Bundler y dev server |
-| **Tailwind CSS v4** | Estilos Utility-First |
-| **TanStack Query v5** | Estado del servidor |
-| **React Router v7** | Enrutamiento |
-| **Axios** | Cliente HTTP |
-| **Lucide React** | Iconos |
-| **Sonner** | Notificaciones toast |
+| Tecnología | Versión | Propósito |
+|------------|---------|-----------|
+| React | 18 | Biblioteca UI |
+| TypeScript | 5.x | Tipado estático |
+| Vite | — | Bundler y dev server |
+| Tailwind CSS | v4 | Estilos Utility-First |
+| TanStack Query | v5 | Estado del servidor y caché |
+| React Router | v6 | Enrutamiento |
+| Axios | — | Cliente HTTP |
+| Lucide React | — | Iconos |
+| Sonner | — | Notificaciones toast |
 
-## Estructura del Proyecto
+---
+
+## Roles de usuario
+
+| Rol | Permisos |
+|-----|---------|
+| `ADMIN` | Acceso total: vehículos, conductores, mantenimiento, requisitos, chips, tanqueos, salidas, historial, usuarios, inspecciones |
+| `AUTORIZADOR` | Aprobar/rechazar solicitudes de salida, ver historial e inspecciones |
+| `CONDUCTOR` | Crear inspecciones pre/postoperacionales, solicitar viajes, ver sus solicitudes |
+| `VIGILANTE` | Check de salida y entrada de vehículos en portería |
+| `CONSULTAS` | Solo lectura: viajes en curso e historial |
+
+---
+
+## Flujo de un viaje
+
+```
+Conductor llena inspección preoperacional
+        ↓
+Conductor solicita viaje (adjunta ID de inspección)
+        ↓
+Autorizador autoriza o rechaza
+        ↓
+Vigilante hace check-salida (registra hora exacta de salida + fotos)
+        ↓
+[Viaje en curso]
+        ↓
+Vigilante hace check-entrada (registra hora exacta de regreso + fotos)
+        ↓
+Conductor llena inspección postoperacional
+        ↓
+Historial de uso registrado con km inicial/final/recorrido
+```
+
+---
+
+## Estructura del proyecto
 
 ```
 Almacén_vehiculos/
-├── .gitignore
-├── README.md
-├── LICENSE
-├── backend/                    # API REST con Express y Prisma
+├── backend/
 │   ├── src/
-│   │   ├── controllers/        # Lógica de negocio
-│   │   ├── routes/             # Definición de rutas
-│   │   ├── middleware/         # Middleware auth, validation
-│   │   ├── services/           # Servicios reutilizables
-│   │   ├── utils/              # Utilidades
-│   │   └── index.ts            # Entry point
+│   │   ├── index.ts              # Entry point, CORS, cron de requisitos vencidos
+│   │   ├── routes/               # Un archivo por entidad
+│   │   │   ├── auth.ts
+│   │   │   ├── vehiculos.ts
+│   │   │   ├── conductores.ts
+│   │   │   ├── salidas.ts
+│   │   │   ├── inspecciones.ts
+│   │   │   ├── historial.ts
+│   │   │   ├── mantenimiento.ts
+│   │   │   ├── requisitos.ts
+│   │   │   ├── tanqueos.ts
+│   │   │   ├── chips.ts
+│   │   │   ├── componentes.ts
+│   │   │   ├── catalogos.ts
+│   │   │   └── usuarios.ts
+│   │   └── utils/
+│   │       └── db.ts             # Pool mysql2 con retry/recreación en ECONNRESET
 │   ├── prisma/
-│   │   ├── schema.prisma       # Definición de modelos
-│   │   ├── migrations/         # Migraciones de BD
-│   │   └── seed.ts             # Datos iniciales
-│   ├── uploads/                # Archivos subidos (imágenes, PDFs)
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── .env                    # Variables de entorno
-│   └── .env.example            # Plantilla de variables
+│   │   └── seed.ts               # Seed inicial: admin + catálogos base
+│   └── uploads/                  # Fotos de inspecciones y documentos PDF
 │
-└── frontend/                   # Aplicación cliente React
-    ├── src/
-    │   ├── components/         # Componentes reutilizables
-    │   ├── pages/              # Páginas de la app
-    │   ├── hooks/              # Custom hooks
-    │   ├── services/           # Integración con API
-    │   ├── types/              # Definiciones TypeScript
-    │   ├── styles/             # Estilos globales
-    │   ├── App.tsx             # Componente principal
-    │   └── main.tsx            # Entry point
-    ├── public/                  # Archivos estáticos
-    ├── index.html
-    ├── package.json
-    ├── tsconfig.json
-    ├── vite.config.ts
-    └── .eslintrc.js
+└── frontend/
+    └── src/
+        ├── api/                  # Clientes axios por entidad
+        ├── components/           # Layout, DataTable, Modal, InspeccionForm, FormField, etc.
+        ├── hooks/                # useVehiculos, useConductores, useSalidas, useCatalogos, etc.
+        ├── pages/
+        │   ├── admin/            # Dashboard, Vehículos, Conductores, Mantenimiento, etc.
+        │   ├── autorizador/      # Pendientes, Salidas, Vehículos, Conductores, Historial
+        │   ├── conductor/        # Solicitar, Solicitudes, Inspecciones
+        │   ├── vigilante/        # Activos, CheckSalida, CheckEntrada
+        │   └── consultas/        # Activos, Historial
+        ├── context/              # AuthContext
+        └── types/                # Definiciones TypeScript
 ```
 
-## Roles de Usuario
+---
 
-| Rol | Descripción | Permisos |
-|-----|-------------|----------|
-| **ADMIN** | Administrador del sistema | Acceso total, gestión de usuarios, configuración |
-| **CONDUCTOR** | Conductores de vehículos | Registro de salidas, inspecciones, ver vehículos asignados |
-| **AUTORIZADOR** | Autoriza salidas y tanqueos | Aprobación de solicitudes de salida y combustible |
-| **VIGILANTE** | Registra entradas/salidas físicas | Registro de paso vehicular, carga de fotos |
-| **CONSULTAS** | Consulta general | Solo lectura de información |
+## Instalación
+
+### Requisitos previos
+
+| Requisito | Versión mínima |
+|-----------|----------------|
+| Node.js | 18.x |
+| MySQL | 5.0.51b o superior |
+| npm | 9.x |
+
+### 1. Clonar el proyecto
+
+```bash
+git clone <url-del-repositorio>
+cd Almacén_vehiculos
+```
+
+### 2. Instalar dependencias
+
+```bash
+cd backend && npm install
+cd ../frontend && npm install
+```
+
+### 3. Crear la base de datos
+
+```sql
+CREATE DATABASE ctv_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+### 4. Aplicar el schema
+
+> El proyecto usa SQL raw (mysql2/promise) porque Prisma no soporta MySQL 5.0.51b.  
+> Aplicar las tablas directamente en MySQL.
+
+**Tablas principales:**
+
+- `usuarios` — cuentas de acceso al sistema
+- `ctv_conductores` — perfil de conductores (vinculado a `usuarios.id` via `id_usuario`)
+- `ctv_vehiculos` — flota de vehículos
+- `ctv_salidas_vehiculos` — solicitudes/viajes
+- `ctv_inspecciones` — inspecciones preoperacionales y postoperacionales
+- `ctv_historial_uso` — registro de km por viaje (requiere columna `id_salida`)
+- `ctv_control_requisitos` — documentos vencibles por vehículo
+- `ctv_mantenimiento` — registros de taller
+- `ctv_chips_gps`, `ctv_control_componentes`, `ctv_control_tanqueo`
+- `ctv_fotos_salida_entrada` — fotos de check salida/entrada
+- Catálogos: `ctv_marcas`, `ctv_colores`, `ctv_tipos_vehiculo`, `ctv_dependencias`, `ctv_componentes`, `ctv_tipos_requisito`
+
+**Columnas adicionales requeridas (no incluidas en el schema original):**
+
+```sql
+ALTER TABLE ctv_historial_uso ADD COLUMN id_salida INT NULL;
+ALTER TABLE ctv_conductores ADD COLUMN id_usuario INT NULL;
+ALTER TABLE ctv_salidas_vehiculos ADD COLUMN estado VARCHAR(30) DEFAULT 'PENDIENTE';
+ALTER TABLE ctv_salidas_vehiculos ADD COLUMN id_vigilante_salida INT NULL;
+ALTER TABLE ctv_salidas_vehiculos ADD COLUMN id_vigilante_entrada INT NULL;
+ALTER TABLE ctv_salidas_vehiculos ADD COLUMN motivo_rechazo TEXT NULL;
+ALTER TABLE ctv_fotos_salida_entrada ADD COLUMN id_salida INT NULL;
+ALTER TABLE ctv_fotos_salida_entrada ADD COLUMN id_subido_por INT NULL;
+```
+
+### 5. Crear `backend/.env`
+
+```env
+DATABASE_URL="mysql://usuario:contraseña@localhost:3306/ctv_db"
+JWT_SECRET="secreto-minimo-32-caracteres"
+JWT_REFRESH_SECRET="otro-secreto-diferente-minimo-32"
+PORT=3001
+```
+
+### 6. Seedear datos iniciales
+
+```bash
+cd backend
+npm run db:seed
+```
+
+Crea el usuario administrador: `admin@infibague.gov.co` / `Admin123!` y los catálogos base (marcas, colores, tipos de vehículo, dependencias, componentes, tipos de requisito).
+
+---
+
+## Variables de entorno
+
+### Backend (`backend/.env`)
+
+| Variable | Descripción | Requerida |
+|----------|-------------|-----------|
+| `DATABASE_URL` | Cadena de conexión MySQL (`mysql://user:pass@host:port/db`) | Sí |
+| `JWT_SECRET` | Secreto para firmar access tokens (mín. 32 chars) | Sí |
+| `JWT_REFRESH_SECRET` | Secreto para refresh tokens (diferente al anterior) | Sí |
+| `PORT` | Puerto del backend (default: `3001`) | No |
+
+---
+
+## Levantar en desarrollo
+
+```bash
+# Terminal 1 — backend (puerto 3001)
+cd backend
+npm run dev
+
+# Terminal 2 — frontend (puerto 5173)
+cd frontend
+npm run dev
+```
+
+Frontend disponible en `http://localhost:5173`.  
+El proxy de Vite redirige `/api` y `/uploads` automáticamente a `localhost:3001`.
+
+---
+
+## Acceso desde red local LAN
+
+Backend escucha en `0.0.0.0:3001`. Vite también expone el frontend en `0.0.0.0`.  
+CORS permite el rango `10.1.1.x` y `localhost`.
+
+Desde otro equipo de la red interna: `http://<IP-del-servidor>:5173`
+
+---
 
 ## API Endpoints
 
@@ -145,6 +283,7 @@ Almacén_vehiculos/
 |--------|----------|-------------|
 | `POST` | `/api/auth/login` | Iniciar sesión |
 | `POST` | `/api/auth/logout` | Cerrar sesión |
+| `POST` | `/api/auth/refresh` | Renovar access token |
 | `GET` | `/api/auth/me` | Obtener usuario actual |
 
 ### Vehículos
@@ -165,40 +304,50 @@ Almacén_vehiculos/
 | `GET` | `/api/conductores/:id` | Obtener conductor |
 | `POST` | `/api/conductores` | Crear conductor |
 | `PUT` | `/api/conductores/:id` | Actualizar conductor |
+| `DELETE` | `/api/conductores/:id` | Eliminar conductor |
 
 ### Salidas de Vehículos
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/api/salidas` | Listar salidas |
+| `GET` | `/api/salidas` | Listar salidas (filtradas por rol) |
+| `GET` | `/api/salidas/:id` | Obtener salida por ID |
 | `POST` | `/api/salidas` | Crear solicitud de salida |
-| `PUT` | `/api/salidas/:id/aprobar` | Aprobar salida |
+| `PUT` | `/api/salidas/:id/autorizar` | Autorizar salida |
 | `PUT` | `/api/salidas/:id/rechazar` | Rechazar salida |
-| `PUT` | `/api/salidas/:id/registrar-entrada` | Registrar entrada |
+| `PUT` | `/api/salidas/:id/check-salida` | Registrar salida física (vigilante) |
+| `PUT` | `/api/salidas/:id/check-entrada` | Registrar entrada física (vigilante) |
+| `DELETE` | `/api/salidas/:id` | Eliminar salida |
 
 ### Inspecciones
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/api/inspecciones` | Listar inspecciones |
-| `POST` | `/api/inspecciones` | Crear inspección |
-| `GET` | `/api/inspecciones/:id` | Ver inspección |
+| `GET` | `/api/inspecciones` | Listar inspecciones (filtradas por rol) |
+| `POST` | `/api/inspecciones` | Crear inspección (multipart, admite fotos) |
 
-### Mantenimientos
+### Historial de Uso
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/api/mantenimientos` | Listar mantenimientos |
-| `POST` | `/api/mantenimientos` | Registrar mantenimiento |
-| `PUT` | `/api/mantenimientos/:id` | Actualizar mantenimiento |
+| `GET` | `/api/historial` | Listar historial con JOIN completo |
 
-### Requisitos Legales
+### Mantenimiento
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/mantenimiento` | Listar mantenimientos |
+| `POST` | `/api/mantenimiento` | Registrar mantenimiento |
+| `PUT` | `/api/mantenimiento/:id` | Actualizar mantenimiento |
+| `DELETE` | `/api/mantenimiento/:id` | Eliminar mantenimiento |
+
+### Requisitos / Documentos
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `GET` | `/api/requisitos` | Listar requisitos |
-| `GET` | `/api/requisitos/vencidos` | Ver requisitos próximos a vencer |
-| `POST` | `/api/requisitos` | Agregar requisito |
+| `POST` | `/api/requisitos` | Crear requisito (multipart, admite PDF) |
+| `DELETE` | `/api/requisitos/:id` | Eliminar requisito |
 
 ### Tanqueos
 
@@ -206,162 +355,36 @@ Almacén_vehiculos/
 |--------|----------|-------------|
 | `GET` | `/api/tanqueos` | Listar tanqueos |
 | `POST` | `/api/tanqueos` | Registrar tanqueo |
-| `PUT` | `/api/tanqueos/:id/aprobar` | Aprobar tanqueo |
+| `DELETE` | `/api/tanqueos/:id` | Eliminar tanqueo |
 
-### Archivos
+### Catálogos
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `POST` | `/api/upload` | Subir archivo |
-| `GET` | `/api/upload/:filename` | Descargar archivo |
+| `GET` | `/api/catalogos/marcas` | Listar marcas |
+| `GET` | `/api/catalogos/colores` | Listar colores |
+| `GET` | `/api/catalogos/tipos-vehiculo` | Listar tipos de vehículo |
+| `GET` | `/api/catalogos/dependencias` | Listar dependencias |
+| `GET` | `/api/catalogos/tipos-requisito` | Listar tipos de requisito |
 
-*[Swagger/OpenAPI completo en `/api/docs`]*
+### Health check
 
-## Instalación
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/health` | Estado del servidor |
 
-### Prerrequisitos
+---
 
-| Requisito | Versión Mínima |
-|-----------|----------------|
-| Node.js | 18.x |
-| MySQL | 8.0 |
-| npm | 9.x |
-
-### Clonar el Proyecto
-
-```bash
-git clone https://github.com/ctv-proyecto/almacen-vehiculos.git
-cd almacen-vehiculos
-```
-
-### Configuración del Backend
-
-```bash
-cd backend
-npm install
-```
-
-Copia el archivo de configuración ejemplo:
-
-```bash
-cp .env.example .env
-```
-
-Edita `.env` con tus credenciales (ver sección [Variables de Entorno](#variables-de-entorno)).
-
-### Configuración de la Base de Datos
-
-```bash
-# Generar cliente Prisma
-npm run db:generate
-
-# Ejecutar migraciones
-npm run db:migrate
-
-# Cargar datos iniciales (seed)
-npm run db:seed
-```
-
-### Iniciar el Backend
-
-```bash
-# Desarrollo (con nodemon)
-npm run dev
-
-# Producción
-npm run build
-npm run start
-```
-
-### Configuración del Frontend
-
-```bash
-cd ../frontend
-npm install
-```
-
-Crea el archivo `.env` si es necesario:
-
-```bash
-echo "VITE_API_URL=http://localhost:3000/api" > .env
-```
-
-### Iniciar el Frontend
-
-```bash
-# Desarrollo
-npm run dev
-
-# Producción
-npm run build
-npm run preview
-```
-
-### Acceso a la Aplicación
-
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:3000
-- **Prisma Studio**: http://localhost:5555 (ejecutar `npm run db:studio`)
-
-## Variables de Entorno
-
-### Backend (.env)
-
-```env
-# Servidor
-PORT=3000
-NODE_ENV=development
-
-# Base de datos
-DATABASE_URL="mysql://root:password@localhost:3306/ctv_db"
-
-# Autenticación
-JWT_SECRET=tu_secreto_jwt_muy_largo_y_seguro_12345
-JWT_EXPIRES_IN=7d
-
-# CORS
-CORS_ORIGIN=http://localhost:5173
-
-# Archivos
-UPLOAD_DIR=./uploads
-MAX_FILE_SIZE=5242880
-```
-
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `PORT` | Puerto del servidor | `3000` |
-| `NODE_ENV` | Entorno de ejecución | `development`, `production` |
-| `DATABASE_URL` | Connection string MySQL | `mysql://user:pass@host:port/db` |
-| `JWT_SECRET` | Clave para firmar tokens JWT | Cadena aleatoria segura |
-| `JWT_EXPIRES_IN` | Tiempo de expiración del token | `7d`, `24h` |
-| `CORS_ORIGIN` | Origen permitido para CORS | `http://localhost:5173` |
-| `UPLOAD_DIR` | Directorio para archivos subidos | `./uploads` |
-| `MAX_FILE_SIZE` | Tamaño máximo de archivo (bytes) | `5242880` (5MB) |
-
-### Frontend (.env)
-
-```env
-VITE_API_URL=http://localhost:3000/api
-```
-
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `VITE_API_URL` | URL base de la API | `http://localhost:3000/api` |
-
-## Scripts Disponibles
+## Scripts disponibles
 
 ### Backend
 
 | Comando | Descripción |
 |---------|-------------|
-| `npm run dev` | Servidor en modo desarrollo (nodemon) |
+| `npm run dev` | Servidor en modo desarrollo (nodemon + ts-node) |
 | `npm run build` | Compila TypeScript a JavaScript |
-| `npm run start` | Ejecuta servidor en producción |
-| `npm run db:migrate` | Crea/actualiza tablas de BD |
-| `npm run db:seed` | Carga datos iniciales |
-| `npm run db:studio` | Abre interfaz visual de Prisma |
-| `npm run db:generate` | Genera cliente Prisma |
-| `npm run db:reset` | Resetea BD (migrate + seed) |
+| `npm run start` | Ejecuta servidor compilado en producción |
+| `npm run db:seed` | Carga datos iniciales (admin + catálogos) |
 
 ### Frontend
 
@@ -369,164 +392,75 @@ VITE_API_URL=http://localhost:3000/api
 |---------|-------------|
 | `npm run dev` | Servidor de desarrollo Vite |
 | `npm run build` | Construye para producción |
-| `npm run preview` | Previsualiza build local |
-| `npm run lint` | Ejecuta ESLint |
-| `npm run lint:fix` | Corrige errores de lint |
+| `npm run preview` | Previsualiza el build localmente |
 
-## Funcionalidades Principales
+---
 
-### Gestión de Vehículos
-- Registro de vehículos con características completas
-- Historial de mantenimientos
-- Control de estado (disponible, en uso, mantenimiento)
-- Gestión de chips GPS
+## Consideraciones técnicas
 
-### Control de Conductores
-- Registro de conductores con licencia
-- Control de vencimiento de licencias
-- Historial de viajes por conductor
-- Vinculación con usuario del sistema
+### MySQL 5.0.51b
+- Prisma no soporta esta versión → todo el acceso a BD es SQL raw con `mysql2/promise`.
+- El pool se recrea automáticamente ante errores `ECONNRESET` (MySQL legacy cierra conexiones inactivas sin previo aviso).
+- `timezone: 'local'` en el pool para evitar desfases de hora.
 
-### Registro de Salidas/Entradas
-- Solicitud de salida con motivo y destino
-- Aprobación por autorizado
-- Registro de salida por vigilante
-- Registro de entrada con kilometraje
-- Carga de fotografías del vehículo
+### Relación conductor ↔ usuario
+`ctv_conductores.id` ≠ `usuarios.id`. El vínculo es `ctv_conductores.id_usuario = usuarios.id`.  
+Al filtrar salidas/inspecciones por conductor logueado se usa subquery:
 
-### Inspecciones
-- Checklist pre-operacional
-- Checklist post-operacional
-- Registro de fallas reportadas
-- Historial de inspecciones por vehículo
-
-### Mantenimientos
-- Registro de ingresos a taller
-- Control de gastos por mantenimiento
-- Historial de reparaciones
-- Seguimiento de kilometraje
-
-### Requisitos Legales
-- SOAT
-- Tecnomecánica
-- Póliza de seguros
-- Seguimiento de vencimientos
-- Notificaciones de próximos a vencer
-
-### Control de Tanqueos
-- Registro de consumo de combustible
-- Aprobación de tanqueos
-- Historial por vehículo
-- Reportes de consumo
-
-### Reportes y Estadísticas
-- Vehículos por dependencia
-- Consumos de combustible
-- Kilometraje acumulado
-- Requisitos por vencer
-- Historial de uso
-
-## Contribución
-
-¡Las contribuciones son bienvenidas! Por favor sigue estos pasos:
-
-1. **Fork** el repositorio
-2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
-3. **Commit** tus cambios (`git commit -m 'Agrega nueva funcionalidad'`)
-4. **Push** a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abre un **Pull Request**
-
-### Estándares de Código
-
-- Backend: ESLint + Prettier
-- Frontend: ESLint + reglas de React
-- Commits: Conventional Commits
-- Branches: `feature/`, `bugfix/`, `hotfix/`
-
-### Testing
-
-```bash
-# Backend - ejecutar tests
-npm run test
-
-# Frontend - ejecutar tests
-npm run test
+```sql
+id_conductor = (SELECT id FROM ctv_conductores WHERE id_usuario = ? LIMIT 1)
 ```
 
-## Licencia
+Al crear un conductor desde el panel admin, vincular manualmente el campo `id_usuario` con el ID del usuario correspondiente.
 
-Este proyecto está bajo la licencia MIT. Ver [LICENSE](LICENSE) para más detalles.
+### Cron job
+El backend ejecuta diariamente a medianoche:
 
+```sql
+UPDATE ctv_control_requisitos
+SET estado_requisito = 'VENCIDO'
+WHERE fecha_vencimiento < NOW() AND estado_requisito = 'VIGENTE'
 ```
-MIT License
 
-Copyright (c) 2024 CTV - Almacén de Vehículos
+### Archivos subidos
+Los archivos (fotos e inspecciones, PDFs de requisitos) se almacenan en `backend/uploads/`.  
+Se sirven como estáticos en `/uploads/:filename`.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+---
 
 ## FAQ
 
-### ¿Cómo agregar un nuevo vehículo?
+### ¿Cómo crear un usuario nuevo?
 
-1. Inicia sesión como ADMIN
-2. Ve a **Vehículos** > **Nuevo Vehículo**
-3. Completa el formulario con los datos requeridos
-4. Assigna un conductor si es necesario
-5. Guarda el registro
+1. Iniciar sesión como `ADMIN`
+2. Ir a **Usuarios** → **Nuevo usuario**
+3. Completar nombre, correo, contraseña y rol
+4. Si el rol es `CONDUCTOR`, luego ir a **Conductores** → **Nuevo conductor** y completar el perfil, asignando el `id_usuario` correspondiente
 
 ### ¿Cómo registrar una salida de vehículo?
 
-1. El conductor inicia sesión
-2. Va a **Salidas** > **Nueva Salida**
-3. Selecciona el vehículo, conductor y destino
-4. Especifica el motivo de la salida
-5. Un AUTORIZADOR debe aprobar la solicitud
-6. El VIGILANTE registra la salida física
+1. El conductor llena la **inspección preoperacional** y obtiene su ID
+2. Va a **Solicitar Viaje** y completa el formulario (adjunta ID de inspección)
+3. El autorizador aprueba o rechaza desde **Solicitudes Pendientes**
+4. El vigilante hace **check-salida** para registrar la hora exacta de partida
+5. Al regresar, el vigilante hace **check-entrada**
+6. El conductor llena la **inspección postoperacional**
 
-### ¿Cómo ver los requisitos próximos a vencer?
+### ¿Por qué no se usa Prisma?
 
-1. Ve a **Mantenimientos** > **Requisitos**
-2. El sistema muestra automáticamente los requisitos que vencen en los próximos 30 días
-3. Puedes filtrar por tipo de requisito
+La base de datos MySQL es versión 5.0.51b. Prisma requiere MySQL 5.7+. Se optó por `mysql2/promise` con SQL raw.
 
-### ¿Cómo cargar documentos PDF?
+### ¿Cómo ver requisitos próximos a vencer?
 
-1. Ve a la sección对应的 (vehículo, conductor, requisito)
-2. Busca la opción **Adjuntar Documento**
-3. Selecciona el archivo PDF
-4. El sistema lo almacenará en `/uploads`
+En el panel **Requisitos**, los documentos vencidos aparecen en rojo y los que vencen en los próximos 30 días en amarillo. El CRON nocturno actualiza automáticamente los estados a `VENCIDO`.
 
-### ¿El sistema envía notificaciones?
+### ¿Cómo acceder desde otro equipo de la red?
 
-Por defecto no. Las notificaciones se muestran en el panel cuando:
-- Una salida requiere aprobación
-- Un requisito está por vencer (próximamente)
-- Una inspección tiene fallas reportadas
+Levantar el proyecto en el servidor y acceder desde `http://<IP-del-servidor>:5173`. El backend permite el rango `10.1.1.x` por CORS.
 
 ### ¿Cómo cambiar el rol de un usuario?
 
-Solo los usuarios con rol ADMIN pueden cambiar roles:
-1. Ve a **Administración** > **Usuarios**
-2. Busca el usuario
-3. Edita y selecciona el nuevo rol
-
-### ¿Soporta múltiples idiomas?
-
-Actualmente solo español. Contribuciones para i18n son bienvenidas.
+Solo `ADMIN` puede hacerlo:
+1. Ir a **Usuarios**
+2. Editar el usuario deseado
+3. Cambiar el rol en el formulario

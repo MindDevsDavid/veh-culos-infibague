@@ -143,7 +143,7 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Datos generales */}
         <Section title="Datos generales">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-slate-600">Vehículo<span className="text-red-500 ml-0.5">*</span></label>
               <select value={form.id_vehiculo} onChange={onVehiculoChange} className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -164,7 +164,7 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
 
         {/* Motor */}
         <Section title="Motor y fluidos">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <Sel label="Estado motor" name="estado_motor" options={opc10} value={form.estado_motor} onChange={set('estado_motor')} />
             <Sel label="Nivel refrigerante" name="nivel_refrigerante" options={['LLENO','MEDIO','BAJO']} value={form.nivel_refrigerante} onChange={set('nivel_refrigerante')} />
             <Sel label="Nivel batería" name="nivel_bateria" options={['BUENO','BAJO','DEFICIENTE']} value={form.nivel_bateria} onChange={set('nivel_bateria')} />
@@ -175,7 +175,7 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
 
         {/* Llantas y suspensión */}
         <Section title="Llantas y suspensión">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <Sel label="Llantas delanteras" name="est_ld" options={opc10} value={form.estado_llantas_delanteras} onChange={set('estado_llantas_delanteras')} />
             <Sel label="Llantas traseras" name="est_lt" options={opc10} value={form.estado_llantas_traseras} onChange={set('estado_llantas_traseras')} />
             <Sel label="Presión llantas" name="presion" options={['CORRECTA','BAJA','ALTA']} value={form.presion_llantas} onChange={set('presion_llantas')} />
@@ -190,7 +190,7 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
 
         {/* Luces y controles */}
         <Section title="Luces y controles">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <Check label="Luces delanteras" value={form.luces_delanteras} onChange={set('luces_delanteras')} />
             <Check label="Luces traseras" value={form.luces_traseras} onChange={set('luces_traseras')} />
             <Check label="Direccionales" value={form.direccionales} onChange={set('direccionales')} />
@@ -205,7 +205,7 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
 
         {/* Seguridad y carrocería */}
         <Section title="Seguridad y carrocería">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <Sel label="Extintor" name="extintor" options={['VIGENTE','VENCIDO','NO_TIENE']} value={form.extintor} onChange={set('extintor')} />
             <Sel label="Botiquín" name="botiquin" options={['COMPLETO','INCOMPLETO','NO_TIENE']} value={form.botiquin} onChange={set('botiquin')} />
             <Sel label="Kit carretera" name="kit" options={['COMPLETO','INCOMPLETO','NO_TIENE']} value={form.kit_carretera} onChange={set('kit_carretera')} />
@@ -218,7 +218,7 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
 
         {/* Resultado */}
         <Section title="Resultado de la inspección">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-slate-700">¿Apto para operar?</span>
               <label className="flex items-center gap-1.5 cursor-pointer">

@@ -101,7 +101,7 @@ export default function AdminVehiculos() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Vehículos</h1>
           <p className="text-sm text-slate-500">{vehiculos.length} vehículos registrados</p>
@@ -125,7 +125,7 @@ export default function AdminVehiculos() {
       />
 
       <Modal open={modal !== null} onClose={() => setModal(null)} title={modal === 'create' ? 'Nuevo Vehículo' : 'Editar Vehículo'} size="xl">
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField as="select" label="Tipo vehículo" required value={form.id_tipo_vehiculo} onChange={set('id_tipo_vehiculo')}>
             <option value="">Seleccionar...</option>
             {tipos.map(t => <option key={t.id} value={t.id}>{t.descripcion}</option>)}
@@ -163,7 +163,7 @@ export default function AdminVehiculos() {
           <FormField label="Valor adquisición ($)" type="number" value={form.valor_adquisicion} onChange={set('valor_adquisicion')} />
           <FormField label="Placa almacén" value={form.placa_almacen} onChange={set('placa_almacen')} />
 
-          <div className="col-span-2 flex justify-end gap-3 pt-2">
+          <div className="col-span-full flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">Cancelar</button>
             <button type="submit" disabled={isPending} className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
               {isPending ? 'Guardando...' : 'Guardar'}

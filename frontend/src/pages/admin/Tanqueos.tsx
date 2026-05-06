@@ -59,7 +59,7 @@ export default function AdminTanqueos() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Tanqueos</h1>
           <p className="text-sm text-slate-500">{items.length} registros</p>
@@ -78,7 +78,7 @@ export default function AdminTanqueos() {
       />
 
       <Modal open={modal} onClose={() => setModal(false)} title="Registrar Tanqueo" size="lg">
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField as="select" label="Vehículo" required value={form.id_vehiculo} onChange={onVehiculoChange}>
             <option value="">Seleccionar...</option>
             {vehiculos.map(v => <option key={v.id} value={v.id}>{v.placa_vehiculo} — {v.linea}</option>)}
@@ -93,7 +93,7 @@ export default function AdminTanqueos() {
             <option value="">Seleccionar...</option>
             {conductores.map(c => <option key={c.id} value={c.id}>{c.nombre_conductor}</option>)}
           </FormField>
-          <div className="col-span-2 flex justify-end gap-3 pt-2">
+          <div className="col-span-full flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setModal(false)} className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">Cancelar</button>
             <button type="submit" disabled={create.isPending} className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">Guardar</button>
           </div>

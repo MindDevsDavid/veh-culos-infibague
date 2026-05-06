@@ -86,7 +86,7 @@ export default function AdminMantenimiento() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Mantenimiento</h1>
           <p className="text-sm text-slate-500">{items.length} registros</p>
@@ -109,7 +109,7 @@ export default function AdminMantenimiento() {
 
       <Modal open={modal !== null} onClose={() => setModal(null)} title={modal === 'create' ? 'Nuevo Mantenimiento' : 'Editar Mantenimiento'} size="xl">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField as="select" label="Vehículo" required value={form.id_vehiculo} onChange={set('id_vehiculo')}>
               <option value="">Seleccionar...</option>
               {vehiculos.map(v => <option key={v.id} value={v.id}>{v.placa_vehiculo} — {v.linea}</option>)}
@@ -120,7 +120,7 @@ export default function AdminMantenimiento() {
             </FormField>
           </div>
           <FormField label="Descripción" required value={form.descripcion} onChange={set('descripcion')} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Fecha ingreso" type="date" required value={form.fecha_ingreso} onChange={set('fecha_ingreso')} />
             <FormField label="Km ingreso" type="number" value={form.kilometraje_ingreso} onChange={set('kilometraje_ingreso')} />
             <FormField label="Taller / Proveedor" value={form.proveedor_taller} onChange={set('proveedor_taller')} />
@@ -128,7 +128,7 @@ export default function AdminMantenimiento() {
           </div>
           <hr className="border-slate-100" />
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Salida del taller (completar al terminar)</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Fecha salida" type="date" value={form.fecha_salida} onChange={set('fecha_salida')} />
             <FormField label="Km salida" type="number" value={form.kilometraje_salida} onChange={set('kilometraje_salida')} />
             <FormField label="Observación salida" value={form.observacion_salida} onChange={set('observacion_salida')} />

@@ -32,7 +32,7 @@ export default function AdminSalidas() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Salidas de Vehículos</h1>
           <p className="text-sm text-slate-500">{salidas.length} registros</p>
@@ -59,7 +59,7 @@ export default function AdminSalidas() {
       <Modal open={detalle !== null} onClose={() => setDetalle(null)} title="Detalle de Salida" size="lg">
         {detalle && (
           <div className="space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
               <div><span className="text-slate-500">Placa:</span> <span className="font-mono font-medium ml-1">{detalle.placa_vehiculo}</span></div>
               <div><span className="text-slate-500">Estado:</span> <span className="ml-1"><StatusBadge value={detalle.estado} map={MAPS.ESTADO_SALIDA} /></span></div>
               <div><span className="text-slate-500">Conductor:</span> <span className="ml-1">{(detalle as any).conductor?.nombre_conductor ?? `#${detalle.id_conductor}`}</span></div>
@@ -68,8 +68,8 @@ export default function AdminSalidas() {
               <div><span className="text-slate-500">Km salida:</span> <span className="ml-1">{detalle.kilometraje_salida?.toLocaleString()}</span></div>
               <div><span className="text-slate-500">Hora salida:</span> <span className="ml-1">{detalle.hora_salida ? new Date(detalle.hora_salida).toLocaleString('es-CO') : '—'}</span></div>
               <div><span className="text-slate-500">Hora entrada:</span> <span className="ml-1">{detalle.hora_entrada ? new Date(detalle.hora_entrada).toLocaleString('es-CO') : '—'}</span></div>
-              {detalle.motivo_rechazo && <div className="col-span-2"><span className="text-red-600">Motivo rechazo:</span> <span className="ml-1">{detalle.motivo_rechazo}</span></div>}
-              {detalle.observaciones && <div className="col-span-2"><span className="text-slate-500">Observaciones:</span> <span className="ml-1">{detalle.observaciones}</span></div>}
+              {detalle.motivo_rechazo && <div className="col-span-full"><span className="text-red-600">Motivo rechazo:</span> <span className="ml-1">{detalle.motivo_rechazo}</span></div>}
+              {detalle.observaciones && <div className="col-span-full"><span className="text-slate-500">Observaciones:</span> <span className="ml-1">{detalle.observaciones}</span></div>}
             </div>
           </div>
         )}

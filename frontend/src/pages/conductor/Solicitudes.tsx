@@ -22,7 +22,7 @@ export default function ConductorSolicitudes() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Mis Solicitudes</h1>
           <p className="text-sm text-slate-500">{salidas.length} solicitudes</p>

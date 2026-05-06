@@ -49,7 +49,7 @@ export default function CheckSalida() {
           <span className="font-mono text-lg font-bold text-slate-800">{salida.placa_vehiculo}</span>
           <StatusBadge value={salida.estado} map={MAPS.ESTADO_SALIDA} />
         </div>
-        <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
           <div><span className="text-slate-500">Conductor:</span> <span className="ml-1">{(salida as any).conductor?.nombre_conductor}</span></div>
           <div><span className="text-slate-500">Destino:</span> <span className="ml-1">{salida.lugar_destino}</span></div>
           <div className="col-span-2"><span className="text-slate-500">Motivo:</span> <span className="ml-1">{salida.motivo_salida}</span></div>

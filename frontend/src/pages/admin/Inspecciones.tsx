@@ -186,7 +186,7 @@ export default function AdminInspecciones() {
     <div className="space-y-5">
       {selected && <DetalleModal i={selected} onClose={() => setSelected(null)} />}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <CheckSquare size={20} className="text-blue-600" /> Inspecciones

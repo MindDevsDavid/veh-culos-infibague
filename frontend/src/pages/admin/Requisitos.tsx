@@ -83,7 +83,7 @@ export default function AdminRequisitos() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Requisitos / Documentos</h1>
           <p className="text-sm text-slate-500">{items.length} documentos registrados</p>
@@ -123,7 +123,7 @@ export default function AdminRequisitos() {
 
       <Modal open={modal} onClose={() => setModal(false)} title="Nuevo Documento" size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField as="select" label="Vehículo" required value={form.id_vehiculo} onChange={set('id_vehiculo')}>
               <option value="">Seleccionar...</option>
               {vehiculos.map(v => <option key={v.id} value={v.id}>{v.placa_vehiculo} — {v.linea}</option>)}

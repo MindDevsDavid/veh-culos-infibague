@@ -145,7 +145,7 @@ export default function AdminHistorial() {
     <div className="space-y-5">
       {selected && <DetalleModal h={selected} onClose={() => setSelected(null)} />}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Historial de Uso</h1>
           <p className="text-sm text-slate-500">{historial.length} registros · {totalKm.toLocaleString()} km totales</p>

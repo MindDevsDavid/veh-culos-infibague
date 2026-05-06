@@ -44,7 +44,7 @@ export default function AdminComponentes() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Control Componentes</h1>
           <p className="text-sm text-slate-500">Componentes instalados por vehículo</p>

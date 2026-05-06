@@ -88,7 +88,7 @@ export default function AdminConductores() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Conductores</h1>
           <p className="text-sm text-slate-500">{conductores.length} conductores registrados</p>
@@ -119,8 +119,8 @@ export default function AdminConductores() {
       />
 
       <Modal open={modal !== null} onClose={() => setModal(null)} title={modal === 'create' ? 'Nuevo Conductor' : 'Editar Conductor'} size="lg">
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="col-span-full">
             <FormField label="Nombre completo" required value={form.nombre_conductor} onChange={set('nombre_conductor')} />
           </div>
           <FormField label="Cédula" required value={form.cedula_conductor} onChange={set('cedula_conductor')} />
@@ -139,7 +139,7 @@ export default function AdminConductores() {
             {deps.map(d => <option key={d.id} value={d.id}>{d.descripcion}</option>)}
           </FormField>
 
-          <div className="col-span-2 flex justify-end gap-3 pt-2">
+          <div className="col-span-full flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">Cancelar</button>
             <button type="submit" disabled={isPending} className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
               {isPending ? 'Guardando...' : 'Guardar'}
