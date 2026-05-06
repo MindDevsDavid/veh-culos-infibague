@@ -1,32 +1,39 @@
 import { Router, Request, Response } from 'express'
-import prisma from '../utils/prisma'
+import { query, queryOne, run } from '../utils/db'
 import { authenticate } from '../middleware/auth'
 import { allowRoles } from '../middleware/roles'
 
 const router = Router()
 router.use(authenticate)
 
-// Componentes instalados por vehículo
+const SELECT_CC = `
+  SELECT cc.*, c.descripcion AS componente_desc
+  FROM ctv_control_componentes cc
+  LEFT JOIN ctv_componentes c ON cc.id_componente = c.id
+`
+
+function mapCC(row: any) {
+  return { ...row, componente: { id: row.id_componente, descripcion: row.componente_desc } }
+}
+
 router.get('/vehiculo/:vehiculoId', allowRoles('ADMIN', 'AUTORIZADOR'), async (req: Request, res: Response) => {
-  const items = await prisma.controlComponente.findMany({
-    where: { id_vehiculo: Number(req.params.vehiculoId) },
-    include: { componente: true },
-  })
-  res.json(items)
+  const rows = await query(SELECT_CC + ' WHERE cc.id_vehiculo = ?', [req.params.vehiculoId])
+  res.json(rows.map(mapCC))
 })
 
 router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
   const { id_vehiculo, id_componente, placa } = req.body
   if (!id_vehiculo || !id_componente) { res.status(400).json({ error: 'Faltan campos requeridos' }); return }
-  const item = await prisma.controlComponente.create({
-    data: { id_vehiculo, id_componente, placa: placa ?? '', modifica_u: req.user!.email },
-    include: { componente: true },
-  })
-  res.status(201).json(item)
+  const r = await run(
+    'INSERT INTO ctv_control_componentes (id_vehiculo, id_componente, placa, modifica_u) VALUES (?, ?, ?, ?)',
+    [id_vehiculo, id_componente, placa ?? '', req.user!.email],
+  )
+  const row = await queryOne(SELECT_CC + ' WHERE cc.id = ?', [r.insertId])
+  res.status(201).json(mapCC(row))
 })
 
 router.delete('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
-  await prisma.controlComponente.delete({ where: { id: Number(req.params.id) } })
+  await run('DELETE FROM ctv_control_componentes WHERE id = ?', [req.params.id])
   res.json({ ok: true })
 })
 

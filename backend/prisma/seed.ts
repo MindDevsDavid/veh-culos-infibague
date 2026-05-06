@@ -1,56 +1,75 @@
-import { PrismaClient, Rol } from '@prisma/client'
+import mysql from 'mysql2/promise'
 import bcrypt from 'bcryptjs'
+import * as dotenv from 'dotenv'
+import path from 'path'
 
-const prisma = new PrismaClient()
+dotenv.config({ path: path.join(__dirname, '..', '.env') })
 
 async function main() {
+  const conn = await mysql.createConnection(process.env.DATABASE_URL!)
+
   const hash = await bcrypt.hash('Admin123!', 12)
 
-  const admin = await prisma.usuario.upsert({
-    where: { email: 'admin@infibague.gov.co' },
-    update: {},
-    create: {
-      nombre: 'Administrador',
-      email: 'admin@infibague.gov.co',
-      password_hash: hash,
-      rol: Rol.ADMIN,
-      activo: true,
-      modifica_u: 'seed',
-    },
-  })
-  console.log('Admin creado:', admin.email)
+  await conn.execute(
+    `INSERT INTO usuarios (nombre, email, password_hash, rol, activo, modifica_u)
+     VALUES ('Administrador', 'admin@infibague.gov.co', ?, 'ADMIN', 1, 'seed')
+     ON DUPLICATE KEY UPDATE nombre=nombre`,
+    [hash],
+  )
+  console.log('Admin: admin@infibague.gov.co / Admin123!')
 
-  // Dependencia base
-  const dep = await prisma.dependencia.upsert({
-    where: { id: 1 },
-    update: {},
-    create: {
-      descripcion: 'INFIbagué',
-      modifica_u: 'seed',
-    },
-  })
+  await conn.execute(
+    `INSERT INTO ctv_dependencias (descripcion, modifica_u) VALUES ('INFIbagué', 'seed')
+     ON DUPLICATE KEY UPDATE descripcion=descripcion`
+  )
 
-  // Tipos de vehículo
   const tiposV = ['Carro', 'Moto', 'Grúa', 'Camión', 'Bus']
   for (const desc of tiposV) {
-    await prisma.tipoVehiculo.upsert({
-      where: { id: tiposV.indexOf(desc) + 1 },
-      update: {},
-      create: { descripcion: desc, modifica_u: 'seed' },
-    })
+    await conn.execute(
+      `INSERT INTO ctv_tipo_vehiculos (descripcion, modifica_u) VALUES (?, 'seed')
+       ON DUPLICATE KEY UPDATE descripcion=descripcion`,
+      [desc],
+    ).catch(() => {})
   }
 
-  // Tipos de requisito
   const tiposR = ['SOAT', 'Revisión Técnico-Mecánica', 'Póliza Todo Riesgo', 'Tarjeta de Operación', 'Extintor', 'Kit de Carretera']
   for (const desc of tiposR) {
-    await prisma.tipoRequisito.create({
-      data: { descripcion: desc, modifica_u: 'seed' },
-    }).catch(() => {})
+    await conn.execute(
+      `INSERT INTO ctv_tipos_requisito (descripcion, modifica_u) VALUES (?, 'seed')
+       ON DUPLICATE KEY UPDATE descripcion=descripcion`,
+      [desc],
+    ).catch(() => {})
   }
 
+  const marcas = ['Chevrolet', 'Ford', 'Toyota', 'Renault', 'Mazda', 'Hyundai', 'Kia', 'Volkswagen']
+  for (const desc of marcas) {
+    await conn.execute(
+      `INSERT INTO ctv_marcas (descripcion, modifica_u) VALUES (?, 'seed')
+       ON DUPLICATE KEY UPDATE descripcion=descripcion`,
+      [desc],
+    ).catch(() => {})
+  }
+
+  const colores = ['Blanco', 'Negro', 'Gris', 'Plata', 'Rojo', 'Azul', 'Verde', 'Amarillo']
+  for (const desc of colores) {
+    await conn.execute(
+      `INSERT INTO ctv_color (descripcion, modifica_u) VALUES (?, 'seed')
+       ON DUPLICATE KEY UPDATE descripcion=descripcion`,
+      [desc],
+    ).catch(() => {})
+  }
+
+  const componentes = ['Extintor', 'Botiquín', 'Kit de carretera', 'Llanta de repuesto', 'Gata', 'Cruceta']
+  for (const desc of componentes) {
+    await conn.execute(
+      `INSERT INTO ctv_componentes (descripcion, modifica_u) VALUES (?, 'seed')
+       ON DUPLICATE KEY UPDATE descripcion=descripcion`,
+      [desc],
+    ).catch(() => {})
+  }
+
+  await conn.end()
   console.log('Seed completado.')
 }
 
-main()
-  .catch(e => { console.error(e); process.exit(1) })
-  .finally(() => prisma.$disconnect())
+main().catch(e => { console.error(e); process.exit(1) })

@@ -1,52 +1,54 @@
 import { Router, Request, Response } from 'express'
-import prisma from '../utils/prisma'
+import { query, queryOne, run } from '../utils/db'
 import { authenticate } from '../middleware/auth'
 import { allowRoles } from '../middleware/roles'
 
 const router = Router()
 router.use(authenticate)
 
-const include = { vehiculo: { select: { placa_vehiculo: true, linea: true, marca: { select: { descripcion: true } } } } }
+const SELECT_MANT = `
+  SELECT m.*, v.placa_vehiculo, v.linea, mk.descripcion AS marca_desc
+  FROM ctv_mantenimientos m
+  LEFT JOIN ctv_vehiculos v ON m.id_vehiculo = v.id
+  LEFT JOIN ctv_marcas mk ON v.id_marca = mk.id
+`
+
+function mapMant(row: any) {
+  return {
+    ...row,
+    vehiculo: { placa_vehiculo: row.placa_vehiculo, linea: row.linea, marca: { descripcion: row.marca_desc } },
+  }
+}
 
 router.get('/', allowRoles('ADMIN', 'AUTORIZADOR'), async (req: Request, res: Response) => {
   const { vehiculo_id } = req.query
-  const mant = await prisma.mantenimiento.findMany({
-    where: vehiculo_id ? { id_vehiculo: Number(vehiculo_id) } : undefined,
-    include,
-    orderBy: { fecha_ingreso: 'desc' },
-  })
-  res.json(mant)
+  const sql = SELECT_MANT + (vehiculo_id ? ' WHERE m.id_vehiculo = ?' : '') + ' ORDER BY m.fecha_ingreso DESC'
+  const rows = await query(sql, vehiculo_id ? [vehiculo_id] : [])
+  res.json(rows.map(mapMant))
 })
 
 router.get('/:id', allowRoles('ADMIN', 'AUTORIZADOR'), async (req: Request, res: Response) => {
-  const m = await prisma.mantenimiento.findUnique({ where: { id: Number(req.params.id) }, include })
-  if (!m) { res.status(404).json({ error: 'Mantenimiento no encontrado' }); return }
-  res.json(m)
+  const row = await queryOne(SELECT_MANT + ' WHERE m.id = ?', [req.params.id])
+  if (!row) { res.status(404).json({ error: 'Mantenimiento no encontrado' }); return }
+  res.json(mapMant(row))
 })
 
 router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
-  const {
-    id_vehiculo, tipo_mantenimiento, descripcion, fecha_ingreso,
-    kilometraje_ingreso, horas_ingreso, proveedor_taller, observacion_ingreso,
-  } = req.body
-
+  const { id_vehiculo, tipo_mantenimiento, descripcion, fecha_ingreso, kilometraje_ingreso, horas_ingreso, proveedor_taller, observacion_ingreso } = req.body
   if (!id_vehiculo || !tipo_mantenimiento || !fecha_ingreso) {
     res.status(400).json({ error: 'Faltan campos requeridos' }); return
   }
 
-  // Cambiar estado del vehículo a EN_MANTENIMIENTO
-  await prisma.vehiculo.update({ where: { id: id_vehiculo }, data: { estado: 'EN_MANTENIMIENTO', modifica_u: req.user!.email } })
+  await run('UPDATE ctv_vehiculos SET estado=?, modifica_u=? WHERE id=?', ['EN_MANTENIMIENTO', req.user!.email, id_vehiculo])
 
-  const m = await prisma.mantenimiento.create({
-    data: {
-      id_vehiculo, tipo_mantenimiento, descripcion,
-      fecha_ingreso: new Date(fecha_ingreso),
-      kilometraje_ingreso, horas_ingreso, proveedor_taller, observacion_ingreso,
-      modifica_u: req.user!.email,
-    },
-    include,
-  })
-  res.status(201).json(m)
+  const r = await run(
+    `INSERT INTO ctv_mantenimientos
+     (id_vehiculo, tipo_mantenimiento, descripcion, fecha_ingreso, kilometraje_ingreso, horas_ingreso, proveedor_taller, observacion_ingreso, modifica_u)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id_vehiculo, tipo_mantenimiento, descripcion, fecha_ingreso, kilometraje_ingreso ?? null, horas_ingreso ?? null, proveedor_taller, observacion_ingreso ?? null, req.user!.email],
+  )
+  const row = await queryOne(SELECT_MANT + ' WHERE m.id = ?', [r.insertId])
+  res.status(201).json(mapMant(row))
 })
 
 router.put('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
@@ -57,31 +59,33 @@ router.put('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
     horas_salida, observacion_salida, fecha_factura, numero_factura, valor_factura,
   } = req.body
 
-  const m = await prisma.mantenimiento.update({
-    where: { id },
-    data: {
-      tipo_mantenimiento, descripcion,
-      fecha_ingreso: fecha_ingreso ? new Date(fecha_ingreso) : undefined,
-      kilometraje_ingreso, horas_ingreso, proveedor_taller, observacion_ingreso,
-      fecha_salida: fecha_salida ? new Date(fecha_salida) : undefined,
-      kilometraje_salida, horas_salida, observacion_salida,
-      fecha_factura: fecha_factura ? new Date(fecha_factura) : undefined,
-      numero_factura, valor_factura,
-      modifica_u: req.user!.email,
-    },
-    include,
-  })
+  await run(
+    `UPDATE ctv_mantenimientos SET
+     tipo_mantenimiento=?, descripcion=?, fecha_ingreso=?, kilometraje_ingreso=?, horas_ingreso=?,
+     proveedor_taller=?, observacion_ingreso=?, fecha_salida=?, kilometraje_salida=?,
+     horas_salida=?, observacion_salida=?, fecha_factura=?, numero_factura=?, valor_factura=?, modifica_u=?
+     WHERE id=?`,
+    [
+      tipo_mantenimiento, descripcion, fecha_ingreso ?? null, kilometraje_ingreso ?? null, horas_ingreso ?? null,
+      proveedor_taller, observacion_ingreso ?? null,
+      fecha_salida ?? null, kilometraje_salida ?? null,
+      horas_salida ?? null, observacion_salida ?? null,
+      fecha_factura ?? null, numero_factura ?? null, valor_factura ?? null,
+      req.user!.email, id,
+    ],
+  )
 
-  // Si se registra salida, vehículo vuelve a ACTIVO
   if (fecha_salida) {
-    await prisma.vehiculo.update({ where: { id: m.id_vehiculo }, data: { estado: 'ACTIVO', modifica_u: req.user!.email } })
+    const row_m = await queryOne<any>('SELECT id_vehiculo FROM ctv_mantenimientos WHERE id = ?', [id])
+    if (row_m) await run('UPDATE ctv_vehiculos SET estado=?, modifica_u=? WHERE id=?', ['ACTIVO', req.user!.email, row_m.id_vehiculo])
   }
 
-  res.json(m)
+  const row = await queryOne(SELECT_MANT + ' WHERE m.id = ?', [id])
+  res.json(mapMant(row))
 })
 
 router.delete('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
-  await prisma.mantenimiento.delete({ where: { id: Number(req.params.id) } })
+  await run('DELETE FROM ctv_mantenimientos WHERE id = ?', [req.params.id])
   res.json({ ok: true })
 })
 

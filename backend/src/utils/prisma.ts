@@ -1,5 +1,2 @@
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
-
-export default prisma
+// Removed — use src/utils/db.ts
+export default null as any

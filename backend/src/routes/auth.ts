@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
-import prisma from '../utils/prisma'
+import { query, queryOne } from '../utils/db'
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt'
 import { authenticate, AuthPayload } from '../middleware/auth'
 
@@ -13,8 +13,8 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     return
   }
 
-  const user = await prisma.usuario.findUnique({ where: { email } })
-  if (!user || !user.activo) {
+  const user = await queryOne<any>('SELECT * FROM usuarios WHERE email = ? AND activo = 1', [email])
+  if (!user) {
     res.status(401).json({ error: 'Credenciales inválidas' })
     return
   }

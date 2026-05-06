@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express'
 import path from 'path'
 import fs from 'fs'
-import prisma from '../utils/prisma'
+import { query, queryOne, run } from '../utils/db'
 import { authenticate } from '../middleware/auth'
 import { allowRoles } from '../middleware/roles'
 import { uploadPdf } from '../middleware/upload'
@@ -9,43 +9,44 @@ import { uploadPdf } from '../middleware/upload'
 const router = Router()
 router.use(authenticate)
 
-const include = {
-  vehiculo: { select: { placa_vehiculo: true } },
-  tipo_requisito: true,
+const SELECT_REQ = `
+  SELECT r.*, v.placa_vehiculo AS v_placa, t.descripcion AS tipo_req_desc
+  FROM ctv_control_requisitos r
+  LEFT JOIN ctv_vehiculos v ON r.id_vehiculo = v.id
+  LEFT JOIN ctv_tipos_requisito t ON r.id_tipo_requisito = t.id
+`
+
+function mapReq(row: any) {
+  const hoy = new Date()
+  return {
+    ...row,
+    vehiculo: { placa_vehiculo: row.v_placa },
+    tipo_requisito: { id: row.id_tipo_requisito, descripcion: row.tipo_req_desc },
+    dias_para_vencer: row.fecha_vencimiento
+      ? Math.ceil((new Date(row.fecha_vencimiento).getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
+      : null,
+  }
 }
 
 router.get('/', allowRoles('ADMIN', 'AUTORIZADOR'), async (req: Request, res: Response) => {
   const { vehiculo_id, vencidos } = req.query
-  const hoy = new Date()
-  const requisitos = await prisma.controlRequisito.findMany({
-    where: {
-      ...(vehiculo_id ? { id_vehiculo: Number(vehiculo_id) } : {}),
-      ...(vencidos === 'true' ? { estado_requisito: 'VENCIDO' } : {}),
-    },
-    include,
-    orderBy: { fecha_vencimiento: 'asc' },
-  })
-
-  // Calcular días para vencer
-  const result = requisitos.map(r => ({
-    ...r,
-    dias_para_vencer: Math.ceil((new Date(r.fecha_vencimiento).getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24)),
-  }))
-  res.json(result)
+  const conditions: string[] = []
+  const params: any[] = []
+  if (vehiculo_id) { conditions.push('r.id_vehiculo = ?'); params.push(vehiculo_id) }
+  if (vencidos === 'true') { conditions.push("r.estado_requisito = 'VENCIDO'") }
+  const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : ''
+  const rows = await query(SELECT_REQ + where + ' ORDER BY r.fecha_vencimiento ASC', params)
+  res.json(rows.map(mapReq))
 })
 
 router.get('/:id', allowRoles('ADMIN', 'AUTORIZADOR'), async (req: Request, res: Response) => {
-  const r = await prisma.controlRequisito.findUnique({ where: { id: Number(req.params.id) }, include })
-  if (!r) { res.status(404).json({ error: 'Requisito no encontrado' }); return }
-  res.json(r)
+  const row = await queryOne(SELECT_REQ + ' WHERE r.id = ?', [req.params.id])
+  if (!row) { res.status(404).json({ error: 'Requisito no encontrado' }); return }
+  res.json(mapReq(row))
 })
 
 router.post('/', allowRoles('ADMIN'), uploadPdf.single('archivo'), async (req: Request, res: Response) => {
-  const {
-    id_vehiculo, id_tipo_requisito, numero_requisito, empresa_expide,
-    fecha_expedicion, fecha_vencimiento, observacion,
-  } = req.body
-
+  const { id_vehiculo, id_tipo_requisito, numero_requisito, empresa_expide, fecha_expedicion, fecha_vencimiento, observacion } = req.body
   if (!id_vehiculo || !id_tipo_requisito || !numero_requisito || !fecha_vencimiento) {
     res.status(400).json({ error: 'Faltan campos requeridos' }); return
   }
@@ -54,34 +55,22 @@ router.post('/', allowRoles('ADMIN'), uploadPdf.single('archivo'), async (req: R
   const vence = new Date(fecha_vencimiento)
   const estado_requisito = vence < hoy ? 'VENCIDO' : 'VIGENTE'
 
-  const r = await prisma.controlRequisito.create({
-    data: {
-      id_vehiculo: Number(id_vehiculo),
-      id_tipo_requisito: Number(id_tipo_requisito),
-      numero_requisito, empresa_expide,
-      fecha_expedicion: new Date(fecha_expedicion),
-      fecha_vencimiento: vence,
-      estado_requisito, observacion,
-      modifica_u: req.user!.email,
-    },
-    include,
-  })
+  const r = await run(
+    `INSERT INTO ctv_control_requisitos
+     (id_vehiculo, id_tipo_requisito, numero_requisito, empresa_expide, fecha_expedicion, fecha_vencimiento, estado_requisito, observacion, modifica_u)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [Number(id_vehiculo), Number(id_tipo_requisito), numero_requisito, empresa_expide ?? null, fecha_expedicion ?? null, vence, estado_requisito, observacion ?? null, req.user!.email],
+  )
 
-  // Guardar PDF en ctv_pdfs si se subió archivo
   if (req.file) {
-    await prisma.pdf.create({
-      data: {
-        nombre_tabla: 'ctv_control_requisitos',
-        id_tabla: r.id,
-        ruta_base: req.file.destination,
-        ruta_logica: req.file.path,
-        nombre_archivo: req.file.filename,
-        modifica_u: req.user!.email,
-      },
-    })
+    await run(
+      'INSERT INTO ctv_pdfs (nombre_tabla, id_tabla, ruta_base, ruta_logica, nombre_archivo, modifica_u) VALUES (?, ?, ?, ?, ?, ?)',
+      ['ctv_control_requisitos', r.insertId, req.file.destination, req.file.path, req.file.filename, req.user!.email],
+    )
   }
 
-  res.status(201).json(r)
+  const row = await queryOne(SELECT_REQ + ' WHERE r.id = ?', [r.insertId])
+  res.status(201).json(mapReq(row))
 })
 
 router.put('/:id', allowRoles('ADMIN'), uploadPdf.single('archivo'), async (req: Request, res: Response) => {
@@ -89,49 +78,51 @@ router.put('/:id', allowRoles('ADMIN'), uploadPdf.single('archivo'), async (req:
   const { id_tipo_requisito, numero_requisito, empresa_expide, fecha_expedicion, fecha_vencimiento, observacion } = req.body
 
   const hoy = new Date()
-  const vence = fecha_vencimiento ? new Date(fecha_vencimiento) : undefined
-  const estado_requisito = vence ? (vence < hoy ? 'VENCIDO' : 'VIGENTE') : undefined
+  const vence = fecha_vencimiento ? new Date(fecha_vencimiento) : null
+  const estado_requisito = vence ? (vence < hoy ? 'VENCIDO' : 'VIGENTE') : null
 
-  const r = await prisma.controlRequisito.update({
-    where: { id },
-    data: {
-      id_tipo_requisito: id_tipo_requisito ? Number(id_tipo_requisito) : undefined,
-      numero_requisito, empresa_expide,
-      fecha_expedicion: fecha_expedicion ? new Date(fecha_expedicion) : undefined,
-      fecha_vencimiento: vence, estado_requisito, observacion,
-      modifica_u: req.user!.email,
-    },
-    include,
-  })
+  await run(
+    `UPDATE ctv_control_requisitos SET
+     id_tipo_requisito=?, numero_requisito=?, empresa_expide=?,
+     fecha_expedicion=?, fecha_vencimiento=?, estado_requisito=?, observacion=?, modifica_u=?
+     WHERE id=?`,
+    [
+      id_tipo_requisito ? Number(id_tipo_requisito) : null,
+      numero_requisito ?? null, empresa_expide ?? null,
+      fecha_expedicion ?? null, vence, estado_requisito, observacion ?? null,
+      req.user!.email, id,
+    ],
+  )
 
   if (req.file) {
-    // Reemplazar PDF anterior
-    const old = await prisma.pdf.findFirst({ where: { nombre_tabla: 'ctv_control_requisitos', id_tabla: id } })
+    const old = await queryOne<any>("SELECT * FROM ctv_pdfs WHERE nombre_tabla='ctv_control_requisitos' AND id_tabla=?", [id])
     if (old) {
       fs.unlink(old.ruta_logica, () => {})
-      await prisma.pdf.update({ where: { id: old.id }, data: { ruta_base: req.file!.destination, ruta_logica: req.file!.path, nombre_archivo: req.file!.filename, modifica_u: req.user!.email } })
+      await run('UPDATE ctv_pdfs SET ruta_base=?, ruta_logica=?, nombre_archivo=?, modifica_u=? WHERE id=?',
+        [req.file.destination, req.file.path, req.file.filename, req.user!.email, old.id])
     } else {
-      await prisma.pdf.create({ data: { nombre_tabla: 'ctv_control_requisitos', id_tabla: id, ruta_base: req.file!.destination, ruta_logica: req.file!.path, nombre_archivo: req.file!.filename, modifica_u: req.user!.email } })
+      await run('INSERT INTO ctv_pdfs (nombre_tabla, id_tabla, ruta_base, ruta_logica, nombre_archivo, modifica_u) VALUES (?, ?, ?, ?, ?, ?)',
+        ['ctv_control_requisitos', id, req.file.destination, req.file.path, req.file.filename, req.user!.email])
     }
   }
 
-  res.json(r)
+  const row = await queryOne(SELECT_REQ + ' WHERE r.id = ?', [id])
+  res.json(mapReq(row))
 })
 
 router.delete('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
   const id = Number(req.params.id)
-  const pdf = await prisma.pdf.findFirst({ where: { nombre_tabla: 'ctv_control_requisitos', id_tabla: id } })
+  const pdf = await queryOne<any>("SELECT * FROM ctv_pdfs WHERE nombre_tabla='ctv_control_requisitos' AND id_tabla=?", [id])
   if (pdf) {
     fs.unlink(pdf.ruta_logica, () => {})
-    await prisma.pdf.delete({ where: { id: pdf.id } })
+    await run('DELETE FROM ctv_pdfs WHERE id = ?', [pdf.id])
   }
-  await prisma.controlRequisito.delete({ where: { id } })
+  await run('DELETE FROM ctv_control_requisitos WHERE id = ?', [id])
   res.json({ ok: true })
 })
 
-// Serve PDF de un requisito
 router.get('/:id/archivo', allowRoles('ADMIN', 'AUTORIZADOR'), async (req: Request, res: Response) => {
-  const pdf = await prisma.pdf.findFirst({ where: { nombre_tabla: 'ctv_control_requisitos', id_tabla: Number(req.params.id) } })
+  const pdf = await queryOne<any>("SELECT * FROM ctv_pdfs WHERE nombre_tabla='ctv_control_requisitos' AND id_tabla=?", [req.params.id])
   if (!pdf) { res.status(404).json({ error: 'Archivo no encontrado' }); return }
   res.sendFile(path.resolve(pdf.ruta_logica))
 })
