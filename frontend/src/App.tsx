@@ -18,20 +18,23 @@ import AdminComponentes from './pages/admin/Componentes'
 import AdminTanqueos   from './pages/admin/Tanqueos'
 import AdminSalidas    from './pages/admin/Salidas'
 import AdminHistorial  from './pages/admin/Historial'
-import AdminUsuarios   from './pages/admin/Usuarios'
+import AdminUsuarios      from './pages/admin/Usuarios'
+import AdminInspecciones  from './pages/admin/Inspecciones'
 
 // ── Conductor pages ───────────────────────────────────────────────────────────
 import ConductorSolicitudes from './pages/conductor/Solicitudes'
 import ConductorSolicitar   from './pages/conductor/Solicitar'
 import InspeccionPre        from './pages/conductor/InspeccionPre'
 import InspeccionPost       from './pages/conductor/InspeccionPost'
+import MisInspecciones      from './pages/conductor/MisInspecciones'
 
 // ── Autorizador pages ─────────────────────────────────────────────────────────
 import AutorizadorPendientes  from './pages/autorizador/Pendientes'
 import AutorizadorSalidas     from './pages/autorizador/Salidas'
 import AutorizadorVehiculos   from './pages/autorizador/Vehiculos'
 import AutorizadorConductores from './pages/autorizador/Conductores'
-import AutorizadorHistorial   from './pages/autorizador/Historial'
+import AutorizadorHistorial    from './pages/autorizador/Historial'
+import AutorizadorInspecciones from './pages/autorizador/Inspecciones'
 
 // ── Vigilante pages ───────────────────────────────────────────────────────────
 import VigilanteActivos  from './pages/vigilante/Activos'
@@ -76,19 +79,23 @@ export default function App() {
             <Route path="/admin/salidas"       element={<LayoutRoute roles={['ADMIN']}><AdminSalidas /></LayoutRoute>} />
             <Route path="/admin/historial"     element={<LayoutRoute roles={['ADMIN']}><AdminHistorial /></LayoutRoute>} />
             <Route path="/admin/usuarios"      element={<LayoutRoute roles={['ADMIN']}><AdminUsuarios /></LayoutRoute>} />
+            <Route path="/admin/inspecciones"  element={<LayoutRoute roles={['ADMIN']}><AdminInspecciones /></LayoutRoute>} />
 
             {/* Conductor */}
             <Route path="/conductor/solicitudes"         element={<LayoutRoute roles={['ADMIN','CONDUCTOR']}><ConductorSolicitudes /></LayoutRoute>} />
             <Route path="/conductor/solicitar"           element={<LayoutRoute roles={['ADMIN','CONDUCTOR']}><ConductorSolicitar /></LayoutRoute>} />
+            <Route path="/conductor/inspeccion/nueva"    element={<LayoutRoute roles={['ADMIN','CONDUCTOR']}><InspeccionPre /></LayoutRoute>} />
             <Route path="/conductor/inspeccion/:id/pre"  element={<LayoutRoute roles={['ADMIN','CONDUCTOR']}><InspeccionPre /></LayoutRoute>} />
             <Route path="/conductor/inspeccion/:id/post" element={<LayoutRoute roles={['ADMIN','CONDUCTOR']}><InspeccionPost /></LayoutRoute>} />
+            <Route path="/conductor/inspecciones"        element={<LayoutRoute roles={['ADMIN','CONDUCTOR']}><MisInspecciones /></LayoutRoute>} />
 
             {/* Autorizador */}
             <Route path="/autorizador/pendientes"  element={<LayoutRoute roles={['ADMIN','AUTORIZADOR']}><AutorizadorPendientes /></LayoutRoute>} />
             <Route path="/autorizador/salidas"     element={<LayoutRoute roles={['ADMIN','AUTORIZADOR']}><AutorizadorSalidas /></LayoutRoute>} />
             <Route path="/autorizador/vehiculos"   element={<LayoutRoute roles={['ADMIN','AUTORIZADOR']}><AutorizadorVehiculos /></LayoutRoute>} />
             <Route path="/autorizador/conductores" element={<LayoutRoute roles={['ADMIN','AUTORIZADOR']}><AutorizadorConductores /></LayoutRoute>} />
-            <Route path="/autorizador/historial"   element={<LayoutRoute roles={['ADMIN','AUTORIZADOR']}><AutorizadorHistorial /></LayoutRoute>} />
+            <Route path="/autorizador/historial"     element={<LayoutRoute roles={['ADMIN','AUTORIZADOR']}><AutorizadorHistorial /></LayoutRoute>} />
+            <Route path="/autorizador/inspecciones"  element={<LayoutRoute roles={['ADMIN','AUTORIZADOR']}><AutorizadorInspecciones /></LayoutRoute>} />
 
             {/* Vigilante */}
             <Route path="/vigilante/activos"           element={<LayoutRoute roles={['ADMIN','VIGILANTE']}><VigilanteActivos /></LayoutRoute>} />

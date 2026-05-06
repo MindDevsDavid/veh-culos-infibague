@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import FormField from '../../components/FormField'
 import { useCreateSalida } from '../../hooks/useSalidas'
@@ -17,11 +17,21 @@ const empty = {
 export default function ConductorSolicitar() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState(empty)
+  const [searchParams] = useSearchParams()
+  const inspeccionId = searchParams.get('inspeccion')
+  const [form, setForm] = useState({ ...empty, id_inspeccion: inspeccionId || '' })
   const crear = useCreateSalida()
   const { data: vehiculos = [] } = useVehiculos()
   const { data: conductores = [] } = useConductores()
   const { data: deps = [] } = useDependencias()
+
+  useEffect(() => {
+    if (user?.rol === 'CONDUCTOR' && conductores.length > 0) {
+      const userId = user.id ?? user.sub
+      const mio = conductores.find(c => c.id_usuario === userId)
+      if (mio) setForm(f => ({ ...f, id_conductor: String(mio.id) }))
+    }
+  }, [conductores, user])
 
   function set(k: keyof typeof empty) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -50,8 +60,12 @@ export default function ConductorSolicitar() {
         <p className="text-sm text-slate-500">Completa la solicitud de salida del vehículo</p>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
-        <strong>Antes de enviar:</strong> debes haber completado la inspección preoperacional. Ingresa el ID de la inspección en el campo correspondiente.
+      <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800 shadow-sm">
+        {form.id_inspeccion ? (
+          <span><strong>Inspección preoperacional seleccionada:</strong> ID {form.id_inspeccion}</span>
+        ) : (
+          <span><strong>Antes de enviar:</strong> Debés completar la inspección preoperacional primero. <a href="/conductor/inspeccion/nueva" className="underline font-medium">Hacer inspección</a></span>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">

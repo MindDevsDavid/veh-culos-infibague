@@ -25,18 +25,22 @@ const NAV: Record<string, NavItem[]> = {
     { to: '/admin/tanqueos',     label: 'Tanqueos',       icon: <Fuel size={18} /> },
     { to: '/admin/salidas',      label: 'Salidas',        icon: <ArrowRightLeft size={18} /> },
     { to: '/admin/historial',    label: 'Historial',      icon: <History size={18} /> },
-    { to: '/admin/usuarios',     label: 'Usuarios',       icon: <UserCog size={18} /> },
+    { to: '/admin/usuarios',      label: 'Usuarios',       icon: <UserCog size={18} /> },
+    { to: '/admin/inspecciones',  label: 'Inspecciones',   icon: <CheckSquare size={18} /> },
   ],
   CONDUCTOR: [
     { to: '/conductor/solicitudes', label: 'Mis Solicitudes', icon: <ClipboardList size={18} /> },
-    { to: '/conductor/solicitar',   label: 'Solicitar Viaje', icon: <ArrowRightLeft size={18} /> },
+    { to: '/conductor/solicitar',  label: 'Solicitar Viaje', icon: <ArrowRightLeft size={18} /> },
+    { to: '/conductor/inspeccion/nueva', label: 'Nueva Inspección',  icon: <CheckSquare size={18} /> },
+    { to: '/conductor/inspecciones',     label: 'Mis Inspecciones',  icon: <ClipboardList size={18} /> },
   ],
   AUTORIZADOR: [
     { to: '/autorizador/pendientes',  label: 'Pendientes',   icon: <ClipboardList size={18} /> },
     { to: '/autorizador/salidas',     label: 'Salidas',      icon: <ArrowRightLeft size={18} /> },
     { to: '/autorizador/vehiculos',   label: 'Vehículos',    icon: <Truck size={18} /> },
     { to: '/autorizador/conductores', label: 'Conductores',  icon: <Users size={18} /> },
-    { to: '/autorizador/historial',   label: 'Historial',    icon: <History size={18} /> },
+    { to: '/autorizador/historial',     label: 'Historial',      icon: <History size={18} /> },
+    { to: '/autorizador/inspecciones',  label: 'Inspecciones',   icon: <CheckSquare size={18} /> },
   ],
   VIGILANTE: [
     { to: '/vigilante/activos', label: 'Vehículos Activos', icon: <CheckSquare size={18} /> },
@@ -76,43 +80,56 @@ export default function Layout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-slate-100">
       {/* Sidebar */}
-      <aside className={`flex flex-col bg-white border-r border-slate-200 transition-all duration-200 ${open ? 'w-56' : 'w-14'}`}>
+      <aside className={`flex flex-col bg-white border-r border-slate-200 shadow-sm transition-all duration-200 ${open ? 'w-60' : 'w-16'}`}>
         {/* Brand */}
-        <div className="flex items-center gap-2 px-3 py-4 border-b border-slate-100 min-h-[60px]">
-          <Truck className="text-blue-600 shrink-0" size={22} />
-          {open && <span className="font-bold text-slate-800 text-sm leading-tight">Control<br/>Vehículos</span>}
+        <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-100 min-h-[68px]">
+          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 shadow-md shrink-0">
+            <Truck className="text-white" size={20} />
+          </div>
+          {open && <span className="font-semibold text-slate-800 text-sm">Control de<br/>Vehículos</span>}
         </div>
 
         {/* Nav items */}
-        <nav className="flex-1 py-3 overflow-y-auto">
+        <nav className="flex-1 py-4 overflow-y-auto px-2">
           {items.map(item => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 mx-2 rounded-lg text-sm transition-colors ${
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                   isActive
-                    ? 'bg-blue-50 text-blue-700 font-medium'
+                    ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 text-blue-700 shadow-sm border border-blue-200/50'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`
               }
               title={!open ? item.label : undefined}
             >
-              <span className="shrink-0">{item.icon}</span>
-              {open && <span className="truncate">{item.label}</span>}
+              {({ isActive }) => (
+                <>
+                  <span className={`shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-500'}`}>{item.icon}</span>
+                  {open && <span className="truncate">{item.label}</span>}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
 
         {/* User info */}
         {open && user && (
-          <div className="border-t border-slate-100 px-3 py-3">
-            <p className="text-xs font-medium text-slate-800 truncate">{user.nombre}</p>
-            <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 ${ROL_COLOR[user.rol]}`}>
-              {ROL_LABEL[user.rol]}
-            </span>
+          <div className="border-t border-slate-100 px-4 py-4 bg-slate-50/50">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-sm font-semibold text-slate-600">
+                {user.nombre.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">{user.nombre}</p>
+                <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-0.5 ${ROL_COLOR[user.rol]}`}>
+                  {ROL_LABEL[user.rol]}
+                </span>
+              </div>
+            </div>
           </div>
         )}
       </aside>
@@ -120,34 +137,36 @@ export default function Layout({ children }: { children: ReactNode }) {
       {/* Main */}
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Topbar */}
-        <header className="h-[60px] bg-white border-b border-slate-200 flex items-center justify-between px-4 shrink-0">
+        <header className="h-[64px] bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 shadow-sm">
           <button
             onClick={() => setOpen(v => !v)}
-            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+            className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all duration-150"
           >
             {open ? <X size={18} /> : <Menu size={18} />}
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {user && (
               <div className="flex items-center gap-2 text-sm text-slate-600">
-                <ChevronRight size={14} className="text-slate-400" />
-                <span>{user.nombre}</span>
+                <span className="font-medium text-slate-800">{user.nombre}</span>
               </div>
             )}
+            <div className="w-px h-5 bg-slate-200 mx-1"></div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 hover:text-red-600 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all duration-150"
             >
-              <LogOut size={15} />
+              <LogOut size={16} />
               <span>Salir</span>
             </button>
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
+        <main className="flex-1 overflow-y-auto p-6 bg-slate-100">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

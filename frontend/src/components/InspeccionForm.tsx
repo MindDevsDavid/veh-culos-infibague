@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import FormField from './FormField'
 import { inspeccionesApi } from '../api/inspecciones'
@@ -55,6 +55,7 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
   const [form, setForm] = useState(emptyForm)
   const [fotos, setFotos] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [savedId, setSavedId] = useState<number | null>(null)
   const { data: vehiculos = [] } = useVehiculos()
   const { data: conductores = [] } = useConductores()
 
@@ -83,13 +84,53 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
     fd.set('tipo_inspeccion', tipo)
     fotos.forEach(f => fd.append('fotos', f))
     try {
-      await inspeccionesApi.create(fd)
-      toast.success('Inspección registrada')
-      navigate('/conductor/solicitudes')
+      const saved = await inspeccionesApi.create(fd)
+      setSavedId(saved.id)
+      toast.success('Inspección registrada exitosamente')
     } catch (err: any) {
       toast.error(err.response?.data?.error ?? 'Error al guardar inspección')
       setSubmitting(false)
     }
+  }
+
+  if (savedId) {
+    return (
+      <div className="max-w-lg mx-auto">
+        <div className="card p-8 text-center space-y-6">
+          <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">
+              {tipo === 'PREOPERACIONAL' ? 'Inspección guardada' : 'Postoperacional registrada'}
+            </h2>
+            <p className="text-slate-500 mt-1">
+              {tipo === 'PREOPERACIONAL'
+                ? 'Ahora podés solicitar el viaje usando esta inspección.'
+                : 'El viaje ha sido marcado como completado.'}
+            </p>
+          </div>
+          {tipo === 'PREOPERACIONAL' && (
+            <div className="bg-slate-50 rounded-lg p-4">
+              <p className="text-sm text-slate-600 mb-2">ID de tu inspección:</p>
+              <p className="text-2xl font-mono font-bold text-slate-800">{savedId}</p>
+            </div>
+          )}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <button onClick={() => navigate('/conductor/solicitudes')} className="btn btn-secondary">
+              Ver mis solicitudes
+            </button>
+            {tipo === 'PREOPERACIONAL' && (
+              <Link to={`/conductor/solicitar?inspeccion=${savedId}`} className="btn btn-primary">
+                Continuar a solicitar viaje
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

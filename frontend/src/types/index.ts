@@ -1,7 +1,8 @@
 export type Rol = 'ADMIN' | 'CONDUCTOR' | 'AUTORIZADOR' | 'VIGILANTE' | 'CONSULTAS'
 
 export interface AuthUser {
-  sub: number
+  id?: number
+  sub?: number
   email: string
   rol: Rol
   nombre: string
@@ -35,6 +36,7 @@ export interface Vehiculo {
 
 export interface Conductor {
   id: number
+  id_usuario?: number
   nombre_conductor: string
   cedula_conductor: string
   licencia_conduccion: string
@@ -92,8 +94,11 @@ export interface Inspeccion {
   id_vehiculo: number
   placa_vehiculo: string
   id_conductor: number
-  tipo_inspeccion: string
+  tipo_inspeccion: 'PREOPERACIONAL' | 'POSTOPERACIONAL'
   kilometraje: number
-  apto_para_operar: boolean
-  reportado_mantenimiento: boolean
+  apto_operar: boolean
+  reporte_mantenimiento: boolean
+  observaciones?: string
+  vehiculo?: { placa_vehiculo: string }
+  conductor?: { nombre_conductor: string }
 }
