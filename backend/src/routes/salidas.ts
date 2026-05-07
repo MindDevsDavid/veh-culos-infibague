@@ -99,6 +99,13 @@ router.get('/en-curso', allowRoles('ADMIN', 'AUTORIZADOR', 'CONSULTAS'), async (
   res.json(await mapSalidas(rows))
 })
 
+router.get('/vehiculos-ocupados', async (_req, res: Response) => {
+  const rows = await query<{ id_vehiculo: number }>(
+    "SELECT DISTINCT id_vehiculo FROM ctv_salidas_vehiculos WHERE estado IN ('PENDIENTE','AUTORIZADA','INSPECCIONADA','EN_CURSO','RETORNANDO')"
+  )
+  res.json(rows.map(r => r.id_vehiculo))
+})
+
 router.get('/:id', async (req: Request, res: Response) => {
   const row = await queryOne(SELECT_S + ' WHERE s.id = ?', [req.params.id])
   if (!row) { res.status(404).json({ error: 'Salida no encontrada' }); return }

@@ -61,6 +61,24 @@ router.post('/', allowRoles('ADMIN', 'CONDUCTOR'), uploadFotos.array('fotos', 4)
     res.status(400).json({ error: 'Faltan campos requeridos' }); return
   }
 
+  if (tipo_inspeccion === 'PREOPERACIONAL') {
+    const retornando = await queryOne<any>(
+      "SELECT id FROM ctv_salidas_vehiculos WHERE id_conductor = ? AND estado = 'RETORNANDO' LIMIT 1",
+      [Number(id_conductor)]
+    )
+    if (retornando) {
+      res.status(400).json({ error: 'El conductor tiene un viaje pendiente de postoperacional. Completá la inspección postoperacional antes de iniciar otro viaje.' }); return
+    }
+
+    const vehiculoOcupado = await queryOne<any>(
+      "SELECT id FROM ctv_salidas_vehiculos WHERE id_vehiculo = ? AND estado IN ('PENDIENTE','AUTORIZADA','INSPECCIONADA','EN_CURSO','RETORNANDO') LIMIT 1",
+      [Number(id_vehiculo)]
+    )
+    if (vehiculoOcupado) {
+      res.status(400).json({ error: 'Este vehículo ya está en uso o tiene un viaje activo.' }); return
+    }
+  }
+
   const toBool = (v: any) => (v === true || v === 'true' || v === '1' || v === 1) ? 1 : 0
   const ahora = new Date()
 

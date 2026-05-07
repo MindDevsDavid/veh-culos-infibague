@@ -1,9 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { salidasApi } from '../api/salidas'
+import api from '../api/client'
 import { toast } from 'sonner'
 
 export function useSalidas(params?: Record<string, string>) {
   return useQuery({ queryKey: ['salidas', params], queryFn: () => salidasApi.list(params) })
+}
+
+export function useVehiculosOcupados() {
+  return useQuery<number[]>({ queryKey: ['vehiculos-ocupados'], queryFn: () => api.get('/salidas/vehiculos-ocupados').then(r => r.data) })
 }
 
 export function useSalidasEnCurso() {

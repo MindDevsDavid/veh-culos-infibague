@@ -5,6 +5,7 @@ import FormField from './FormField'
 import { inspeccionesApi } from '../api/inspecciones'
 import { useVehiculos } from '../hooks/useVehiculos'
 import { useConductores } from '../hooks/useConductores'
+import { useSalidas, useVehiculosOcupados } from '../hooks/useSalidas'
 import { useAuth } from '../context/AuthContext'
 
 type Estado10  = 'BUENO' | 'REGULAR' | 'MALO'
@@ -60,6 +61,8 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
   const [savedId, setSavedId] = useState<number | null>(null)
   const { data: vehiculos = [] } = useVehiculos()
   const { data: conductores = [] } = useConductores()
+  const { data: ocupados = [] } = useVehiculosOcupados()
+  const { data: misSalidas = [] } = useSalidas()
 
   useEffect(() => {
     if (user?.rol === 'CONDUCTOR' && conductores.length > 0) {
@@ -101,6 +104,38 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
       toast.error(err.response?.data?.error ?? 'Error al guardar inspección')
       setSubmitting(false)
     }
+  }
+
+  const salidaRetornando = tipo === 'PREOPERACIONAL'
+    ? misSalidas.find((s: any) => s.estado === 'RETORNANDO')
+    : null
+  const vehiculosDisponibles = vehiculos.filter(v => !ocupados.includes(v.id))
+
+  if (tipo === 'PREOPERACIONAL' && salidaRetornando) {
+    return (
+      <div className="max-w-lg mx-auto">
+        <div className="card p-8 text-center space-y-5">
+          <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+            <svg className="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-800">Postoperacional pendiente</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Tenés un viaje que regresó y aún no completaste la inspección postoperacional.
+              Debés hacerlo antes de iniciar otro viaje.
+            </p>
+            <p className="text-sm font-mono font-medium text-slate-700 mt-2">
+              Vehículo: {(salidaRetornando as any).placa_vehiculo} — {(salidaRetornando as any).lugar_destino}
+            </p>
+          </div>
+          <Link to={`/conductor/inspeccion/${salidaRetornando.id}/post`} className="inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">
+            Completar inspección postoperacional
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   if (savedId) {
@@ -158,7 +193,7 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
               <label className="text-xs font-medium text-slate-600">Vehículo<span className="text-red-500 ml-0.5">*</span></label>
               <select value={form.id_vehiculo} onChange={onVehiculoChange} className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Seleccionar...</option>
-                {vehiculos.map(v => <option key={v.id} value={v.id}>{v.placa_vehiculo} — {v.linea}</option>)}
+                {vehiculosDisponibles.map(v => <option key={v.id} value={v.id}>{v.placa_vehiculo} — {v.linea}</option>)}
               </select>
             </div>
             <div>
