@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Filter, X } from 'lucide-react'
+import { Filter, X, Fuel } from 'lucide-react'
 import DataTable from '../../components/DataTable'
 import type { Column } from '../../components/DataTable'
 import { historialApi } from '../../api/historial'
 import type { HistorialUso } from '../../api/historial'
 import { useVehiculos } from '../../hooks/useVehiculos'
+import api from '../../api/client'
 
 function Campo({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
@@ -19,6 +20,12 @@ function Campo({ label, value }: { label: string; value?: string | null }) {
 
 function DetalleModal({ h, onClose }: { h: HistorialUso; onClose: () => void }) {
   const s = h.salida
+
+  const { data: tanqueos = [] } = useQuery<any[]>({
+    queryKey: ['tanqueos-salida', s?.id],
+    queryFn: () => api.get('/tanqueos', { params: { salida_id: s!.id } }).then(r => r.data),
+    enabled: !!s?.id,
+  })
   const fmt = (d?: string | null) => d ? new Date(d).toLocaleDateString('es-CO') : null
   const fmtDT = (d?: string | null) => {
     if (!d) return null
@@ -101,6 +108,42 @@ function DetalleModal({ h, onClose }: { h: HistorialUso; onClose: () => void }) 
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Observaciones postoperacional</p>
               <p className="text-sm text-slate-700">{h.observaciones}</p>
+            </div>
+          )}
+
+          {tanqueos.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2 flex items-center gap-1.5">
+                <Fuel size={12} /> Tanqueos ({tanqueos.length})
+              </p>
+              <div className="space-y-2">
+                {tanqueos.map((t: any) => (
+                  <div key={t.id} className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Combustible</span>
+                      <span className="text-slate-700">{t.tipo_combustible ?? '—'}</span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Galones</span>
+                      <span className="text-slate-700">{t.cantidad_galones} gal</span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Estado</span>
+                      <span className={`inline-flex w-fit text-xs font-semibold px-2 py-0.5 rounded-full ${t.estado === 'AUTORIZADA' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{t.estado}</span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Fecha</span>
+                      <span className="text-slate-700">{new Date(t.fecha_tanqueo).toLocaleDateString('es-CO')}</span>
+                    </div>
+                    {t.autorizador?.nombre && (
+                      <div className="flex flex-col gap-0.5 col-span-2">
+                        <span className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Autorizado por</span>
+                        <span className="text-slate-700">{t.autorizador.nombre}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

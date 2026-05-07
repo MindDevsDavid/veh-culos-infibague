@@ -10,8 +10,8 @@ import { usuariosApi } from '../../api/usuarios'
 import type { Usuario } from '../../api/usuarios'
 import type { Rol } from '../../types'
 
-const ROLES: Rol[] = ['ADMIN', 'AUTORIZADOR', 'VIGILANTE', 'CONSULTAS']
-const ROL_LABEL: Record<Rol, string> = { ADMIN: 'Administrador', CONDUCTOR: 'Conductor', AUTORIZADOR: 'Autorizador', VIGILANTE: 'Vigilante', CONSULTAS: 'Consultas' }
+const ROLES: Rol[] = ['ADMIN', 'AUTORIZADOR', 'ALMACENISTA', 'VIGILANTE', 'CONSULTAS']
+const ROL_LABEL: Record<Rol, string> = { ADMIN: 'Administrador', CONDUCTOR: 'Conductor', AUTORIZADOR: 'Autorizador', VIGILANTE: 'Vigilante', CONSULTAS: 'Consultas', ALMACENISTA: 'Almacenista' }
 
 const empty = { nombre: '', email: '', password: '', rol: 'AUTORIZADOR' as Rol, activo: 'true' }
 type FormState = typeof empty

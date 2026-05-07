@@ -12,6 +12,7 @@ export default function RoleRedirect() {
     case 'AUTORIZADOR': return <Navigate to="/autorizador/pendientes" replace />
     case 'VIGILANTE':   return <Navigate to="/vigilante/activos" replace />
     case 'CONSULTAS':   return <Navigate to="/consultas/activos" replace />
+    case 'ALMACENISTA': return <Navigate to="/almacenista/tanqueos" replace />
     default:            return <Navigate to="/login" replace />
   }
 }

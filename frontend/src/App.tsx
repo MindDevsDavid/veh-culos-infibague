@@ -45,6 +45,10 @@ import CheckEntrada      from './pages/vigilante/CheckEntrada'
 import ConsultasActivos  from './pages/consultas/Activos'
 import ConsultasHistorial from './pages/consultas/Historial'
 
+// ── Almacenista pages ─────────────────────────────────────────────────────────
+import AlmacenistaTanqueos from './pages/almacenista/Tanqueos'
+import ConductorTanqueos   from './pages/conductor/Tanqueos'
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
 })
@@ -105,6 +109,12 @@ export default function App() {
             {/* Consultas */}
             <Route path="/consultas/activos"   element={<LayoutRoute roles={['ADMIN','CONSULTAS']}><ConsultasActivos /></LayoutRoute>} />
             <Route path="/consultas/historial" element={<LayoutRoute roles={['ADMIN','CONSULTAS']}><ConsultasHistorial /></LayoutRoute>} />
+
+            {/* Almacenista */}
+            <Route path="/almacenista/tanqueos" element={<LayoutRoute roles={['ADMIN','ALMACENISTA']}><AlmacenistaTanqueos /></LayoutRoute>} />
+
+            {/* Conductor - tanqueos */}
+            <Route path="/conductor/tanqueos" element={<LayoutRoute roles={['ADMIN','CONDUCTOR']}><ConductorTanqueos /></LayoutRoute>} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

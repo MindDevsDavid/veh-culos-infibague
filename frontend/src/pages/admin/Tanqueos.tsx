@@ -12,8 +12,8 @@ import { useConductores } from '../../hooks/useConductores'
 
 interface Tanqueo {
   id: number; id_vehiculo: number; id_salida: number; placa_vehiculo: string
-  fecha_tanqueo: string; tipo_combustible: string; cantidad_galones: number
-  vehiculo?: { placa_vehiculo: string }; conductor?: { nombre_conductor: string }; autorizador?: { nombre: string }
+  fecha_tanqueo: string; tipo_combustible: string; cantidad_galones: number; estado: string
+  vehiculo?: { placa_vehiculo: string }; conductor?: { nombre_conductor: string }; autorizador?: { nombre: string } | null
 }
 
 const empty = { id_vehiculo: '', id_salida: '', placa_vehiculo: '', fecha_tanqueo: '', tipo_combustible: 'GASOLINA', cantidad_galones: '', id_conductor_tanqueo: '' }
@@ -54,7 +54,10 @@ export default function AdminTanqueos() {
     { key: 'tipo_combustible', header: 'Combustible' },
     { key: 'cantidad_galones', header: 'Galones', render: t => `${t.cantidad_galones} gal` },
     { key: 'conductor', header: 'Conductor', render: t => t.conductor?.nombre_conductor ?? '' },
-    { key: 'autorizador', header: 'Autorizado por', render: t => t.autorizador?.nombre ?? '' },
+    { key: 'estado', header: 'Estado', render: t => (
+      <span className={`inline-flex text-xs font-semibold px-2 py-0.5 rounded-full ${t.estado === 'AUTORIZADA' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{t.estado}</span>
+    )},
+    { key: 'autorizador', header: 'Autorizado por', render: t => t.autorizador?.nombre ?? '—' },
   ]
 
   return (

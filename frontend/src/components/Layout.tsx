@@ -33,6 +33,7 @@ const NAV: Record<string, NavItem[]> = {
     { to: '/conductor/solicitar',  label: 'Solicitar Viaje', icon: <ArrowRightLeft size={18} /> },
     { to: '/conductor/inspeccion/nueva', label: 'Nueva Inspección',  icon: <CheckSquare size={18} /> },
     { to: '/conductor/inspecciones',     label: 'Mis Inspecciones',  icon: <ClipboardList size={18} /> },
+    { to: '/conductor/tanqueos',         label: 'Mis Tanqueos',       icon: <Fuel size={18} /> },
   ],
   AUTORIZADOR: [
     { to: '/autorizador/pendientes',  label: 'Pendientes',   icon: <ClipboardList size={18} /> },
@@ -49,6 +50,9 @@ const NAV: Record<string, NavItem[]> = {
     { to: '/consultas/activos',   label: 'Viajes en Curso', icon: <ArrowRightLeft size={18} /> },
     { to: '/consultas/historial', label: 'Historial',       icon: <History size={18} /> },
   ],
+  ALMACENISTA: [
+    { to: '/almacenista/tanqueos', label: 'Tanqueos', icon: <Fuel size={18} /> },
+  ],
 }
 
 const ROL_LABEL: Record<string, string> = {
@@ -57,6 +61,7 @@ const ROL_LABEL: Record<string, string> = {
   AUTORIZADOR: 'Autorizador',
   VIGILANTE: 'Vigilante',
   CONSULTAS: 'Consultas',
+  ALMACENISTA: 'Almacenista',
 }
 
 const ROL_COLOR: Record<string, string> = {
@@ -65,6 +70,7 @@ const ROL_COLOR: Record<string, string> = {
   AUTORIZADOR: 'bg-amber-100 text-amber-700',
   VIGILANTE: 'bg-green-100 text-green-700',
   CONSULTAS: 'bg-slate-100 text-slate-600',
+  ALMACENISTA: 'bg-orange-100 text-orange-700',
 }
 
 export default function Layout({ children }: { children: ReactNode }) {
