@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import FormField from './FormField'
 import { inspeccionesApi } from '../api/inspecciones'
 import { useVehiculos } from '../hooks/useVehiculos'
 import { useConductores } from '../hooks/useConductores'
+import { useAuth } from '../context/AuthContext'
 
 type Estado10  = 'BUENO' | 'REGULAR' | 'MALO'
 type Extintor  = 'VIGENTE' | 'VENCIDO' | 'NO_TIENE'
@@ -52,12 +53,21 @@ const emptyForm = {
 
 export default function InspeccionForm({ tipo, salidaId }: Props) {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [form, setForm] = useState(emptyForm)
   const [fotos, setFotos] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [savedId, setSavedId] = useState<number | null>(null)
   const { data: vehiculos = [] } = useVehiculos()
   const { data: conductores = [] } = useConductores()
+
+  useEffect(() => {
+    if (user?.rol === 'CONDUCTOR' && conductores.length > 0) {
+      const userId = user.id ?? user.sub
+      const mio = conductores.find(c => c.id_usuario === userId)
+      if (mio) setForm(f => ({ ...f, id_conductor: String(mio.id) }))
+    }
+  }, [conductores, user])
 
   function set(k: keyof typeof emptyForm) {
     return (v: string) => setForm(f => ({ ...f, [k]: v }))
@@ -153,10 +163,14 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
             </div>
             <div>
               <label className="text-xs font-medium text-slate-600">Conductor<span className="text-red-500 ml-0.5">*</span></label>
-              <select value={form.id_conductor} onChange={setInput('id_conductor')} className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Seleccionar...</option>
-                {conductores.map(c => <option key={c.id} value={c.id}>{c.nombre_conductor}</option>)}
-              </select>
+              {user?.rol === 'CONDUCTOR' ? (
+                <input readOnly value={conductores.find(c => String(c.id) === form.id_conductor)?.nombre_conductor ?? ''} className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm bg-slate-50 text-slate-500 cursor-default" />
+              ) : (
+                <select value={form.id_conductor} onChange={setInput('id_conductor')} className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Seleccionar...</option>
+                  {conductores.map(c => <option key={c.id} value={c.id}>{c.nombre_conductor}</option>)}
+                </select>
+              )}
             </div>
             <FormField label="Kilometraje actual" type="number" required value={form.kilometraje} onChange={setInput('kilometraje')} />
           </div>

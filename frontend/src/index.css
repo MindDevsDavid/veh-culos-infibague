@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@theme {
+@theme{
   /* Colores corporativos */
   --color-primary-50: #eff6ff;
   --color-primary-100: #dbeafe;
@@ -26,7 +26,6 @@
 
 * {
   box-sizing: border-box;
-  margin: 0;
 }
 
 body {

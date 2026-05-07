@@ -12,7 +12,7 @@ type TextareaProps = BaseProps & TextareaHTMLAttributes<HTMLTextAreaElement> & {
 
 type Props = InputProps | SelectProps | TextareaProps
 
-const baseClass = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50'
+const baseClass = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 read-only:bg-slate-50 read-only:text-slate-500 read-only:cursor-default'
 
 export default function FormField(props: Props) {
   const { label, error, required, as = 'input', ...rest } = props

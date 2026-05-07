@@ -27,7 +27,7 @@ export default function ConductorSolicitudes() {
           <h1 className="text-xl font-bold text-slate-800">Mis Solicitudes</h1>
           <p className="text-sm text-slate-500">{salidas.length} solicitudes</p>
         </div>
-        <Link to="/conductor/solicitar" className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+        <Link to="/conductor/inspeccion/nueva" className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
           <Plus size={16} /> Nueva solicitud
         </Link>
       </div>

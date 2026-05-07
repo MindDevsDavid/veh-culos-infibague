@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import FormField from '../../components/FormField'
 import { useCreateSalida } from '../../hooks/useSalidas'
@@ -53,6 +53,29 @@ export default function ConductorSolicitar() {
     } catch { /* toast shown by hook */ }
   }
 
+  const miConductor = conductores.find(c => c.id_usuario === (user?.id ?? user?.sub))
+
+  if (!inspeccionId) {
+    return (
+      <div className="max-w-lg mx-auto">
+        <div className="card p-8 text-center space-y-5">
+          <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+            <svg className="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-800">Inspección preoperacional requerida</h2>
+            <p className="text-sm text-slate-500 mt-1">Debés completar la inspección antes de solicitar un viaje.</p>
+          </div>
+          <Link to="/conductor/inspeccion/nueva" className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">
+            Hacer inspección preoperacional
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
@@ -61,11 +84,7 @@ export default function ConductorSolicitar() {
       </div>
 
       <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800 shadow-sm">
-        {form.id_inspeccion ? (
-          <span><strong>Inspección preoperacional seleccionada:</strong> ID {form.id_inspeccion}</span>
-        ) : (
-          <span><strong>Antes de enviar:</strong> Debés completar la inspección preoperacional primero. <a href="/conductor/inspeccion/nueva" className="underline font-medium">Hacer inspección</a></span>
-        )}
+        <span><strong>Inspección preoperacional:</strong> ID {form.id_inspeccion}</span>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
@@ -74,11 +93,8 @@ export default function ConductorSolicitar() {
             <option value="">Seleccionar...</option>
             {vehiculos.filter(v => v.estado === 'ACTIVO').map(v => <option key={v.id} value={v.id}>{v.placa_vehiculo} — {v.linea}</option>)}
           </FormField>
-          <FormField as="select" label="Conductor" required value={form.id_conductor} onChange={set('id_conductor')}>
-            <option value="">Seleccionar...</option>
-            {conductores.map(c => <option key={c.id} value={c.id}>{c.nombre_conductor}</option>)}
-          </FormField>
-          <FormField label="ID Inspección preoperacional" type="number" value={form.id_inspeccion} onChange={set('id_inspeccion')} placeholder="ID de la inspección realizada" />
+          <FormField label="Conductor" value={miConductor?.nombre_conductor ?? user?.nombre ?? ''} onChange={() => {}} readOnly />
+          <FormField label="ID Inspección preoperacional" type="number" value={form.id_inspeccion} onChange={set('id_inspeccion')} readOnly />
           <FormField label="Km actual del vehículo" type="number" required value={form.kilometraje_salida} onChange={set('kilometraje_salida')} />
           <FormField label="Fecha de viaje" type="date" required value={form.fecha_salida} onChange={set('fecha_salida')} />
           <FormField as="select" label="Dependencia que usa" required value={form.id_dependencia_uso} onChange={set('id_dependencia_uso')}>

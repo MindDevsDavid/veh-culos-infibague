@@ -101,12 +101,14 @@ export default function AdminDashboard() {
         </div>
         <div className="divide-y divide-slate-100">
           {vehiculos.map(v => (
-            <div key={v.id} className="px-5 py-3 flex items-center justify-between text-sm hover:bg-slate-50/50 transition-colors">
-              <div className="flex items-center gap-3">
-                <span className="font-mono font-semibold text-slate-800 bg-slate-100 px-2 py-1 rounded text-xs">{v.placa_vehiculo}</span>
-                <span className="text-slate-600">{v.linea}</span>
-              </div>
-              <span className={`badge ${
+            <div key={v.id} className="px-5 py-3 flex items-center gap-3 text-xs hover:bg-slate-50/50 transition-colors flex-wrap">
+              <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded shrink-0">{v.placa_vehiculo}</span>
+              <span className="font-medium text-slate-700 shrink-0">{v.linea}{v.anno ? ` ${v.anno}` : ''}</span>
+              {v.tipo_vehiculo && <><span className="text-slate-300">·</span><span className="text-slate-500">{v.tipo_vehiculo.descripcion}</span></>}
+              {v.tipo_combustible && <><span className="text-slate-300">·</span><span className="text-slate-400">{v.tipo_combustible}</span></>}
+              {v.capacidad_pasajeros && <><span className="text-slate-300">·</span><span className="text-slate-400">{v.capacidad_pasajeros} {v.capacidad_pasajeros === 1 ? 'pasajero' : 'pasajeros'}</span></>}
+              {v.dependencia && <><span className="text-slate-300">·</span><span className="text-slate-500">{v.dependencia.descripcion}</span></>}
+              <span className={`badge ml-auto shrink-0 ${
                 v.estado === 'ACTIVO' ? 'badge-success' :
                 v.estado === 'EN_MANTENIMIENTO' ? 'badge-warning' :
                 'badge-error'
