@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { toast } from 'sonner'
+import { useQuery } from '@tanstack/react-query'
 import FormField from '../../components/FormField'
 import { useCreateSalida } from '../../hooks/useSalidas'
 import { useVehiculos } from '../../hooks/useVehiculos'
 import { useConductores } from '../../hooks/useConductores'
 import { useDependencias } from '../../hooks/useCatalogos'
 import { useAuth } from '../../context/AuthContext'
+import { inspeccionesApi } from '../../api/inspecciones'
 
 const empty = {
   id_vehiculo: '', id_conductor: '', id_inspeccion: '',
@@ -24,6 +25,11 @@ export default function ConductorSolicitar() {
   const { data: vehiculos = [] } = useVehiculos()
   const { data: conductores = [] } = useConductores()
   const { data: deps = [] } = useDependencias()
+  const { data: inspeccion } = useQuery({
+    queryKey: ['inspeccion', inspeccionId],
+    queryFn: () => inspeccionesApi.get(Number(inspeccionId)),
+    enabled: !!inspeccionId,
+  })
 
   useEffect(() => {
     if (user?.rol === 'CONDUCTOR' && conductores.length > 0) {
@@ -32,6 +38,16 @@ export default function ConductorSolicitar() {
       if (mio) setForm(f => ({ ...f, id_conductor: String(mio.id) }))
     }
   }, [conductores, user])
+
+  useEffect(() => {
+    if (inspeccion) {
+      setForm(f => ({
+        ...f,
+        id_vehiculo: String((inspeccion as any).id_vehiculo ?? ''),
+        kilometraje_salida: String((inspeccion as any).kilometraje ?? ''),
+      }))
+    }
+  }, [inspeccion])
 
   function set(k: keyof typeof empty) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -66,7 +82,7 @@ export default function ConductorSolicitar() {
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-800">Inspección preoperacional requerida</h2>
-            <p className="text-sm text-slate-500 mt-1">Debés completar la inspección antes de solicitar un viaje.</p>
+            <p className="text-sm text-slate-500 mt-1">Debes completar la inspección antes de solicitar un viaje.</p>
           </div>
           <Link to="/conductor/inspeccion/nueva" className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">
             Hacer inspección preoperacional
@@ -89,13 +105,21 @@ export default function ConductorSolicitar() {
 
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField as="select" label="Vehículo" required value={form.id_vehiculo} onChange={set('id_vehiculo')}>
-            <option value="">Seleccionar...</option>
-            {vehiculos.filter(v => v.estado === 'ACTIVO').map(v => <option key={v.id} value={v.id}>{v.placa_vehiculo} — {v.linea}</option>)}
-          </FormField>
+          {inspeccion ? (
+            <FormField
+              label="Vehículo"
+              value={`${(inspeccion as any).vehiculo?.placa_vehiculo ?? (inspeccion as any).placa_vehiculo ?? ''} — ${(inspeccion as any).vehiculo?.linea ?? ''}`}
+              onChange={() => {}} readOnly
+            />
+          ) : (
+            <FormField as="select" label="Vehículo" required value={form.id_vehiculo} onChange={set('id_vehiculo')}>
+              <option value="">Seleccionar...</option>
+              {vehiculos.filter(v => v.estado === 'ACTIVO').map(v => <option key={v.id} value={v.id}>{v.placa_vehiculo} — {v.linea}</option>)}
+            </FormField>
+          )}
           <FormField label="Conductor" value={miConductor?.nombre_conductor ?? user?.nombre ?? ''} onChange={() => {}} readOnly />
           <FormField label="ID Inspección preoperacional" type="number" value={form.id_inspeccion} onChange={set('id_inspeccion')} readOnly />
-          <FormField label="Km actual del vehículo" type="number" required value={form.kilometraje_salida} onChange={set('kilometraje_salida')} />
+          <FormField label="Km actual del vehículo" type="number" required value={form.kilometraje_salida} onChange={set('kilometraje_salida')} readOnly={!!inspeccion} />
           <FormField label="Fecha de viaje" type="date" required value={form.fecha_salida} onChange={set('fecha_salida')} />
           <FormField as="select" label="Dependencia que usa" required value={form.id_dependencia_uso} onChange={set('id_dependencia_uso')}>
             <option value="">Seleccionar...</option>

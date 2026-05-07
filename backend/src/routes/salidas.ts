@@ -16,7 +16,8 @@ const SELECT_S = `
     uvs.nombre AS vigilante_salida_nombre,
     uve.nombre AS vigilante_entrada_nombre,
     d.descripcion AS dependencia_desc,
-    insp.id AS insp_id, insp.tipo_inspeccion, insp.apto_operar AS apto_para_operar, insp.kilometraje AS insp_km
+    insp.id AS insp_id, insp.tipo_inspeccion, insp.apto_operar AS apto_para_operar, insp.kilometraje AS insp_km,
+    insp_post.id AS insp_post_id, insp_post.kilometraje AS insp_post_km
   FROM ctv_salidas_vehiculos s
   LEFT JOIN ctv_vehiculos v ON s.id_vehiculo = v.id
   LEFT JOIN ctv_tipo_vehiculos tv ON v.id_tipo_vehiculo = tv.id
@@ -27,6 +28,7 @@ const SELECT_S = `
   LEFT JOIN usuarios uve ON s.id_vigilante_entrada = uve.id
   LEFT JOIN ctv_dependencias d ON s.id_dependencia_uso = d.id
   LEFT JOIN ctv_inspecciones insp ON s.id_inspeccion = insp.id
+  LEFT JOIN ctv_inspecciones insp_post ON s.id_inspeccion_post = insp_post.id
 `
 
 async function mapSalida(row: any) {
@@ -40,6 +42,7 @@ async function mapSalida(row: any) {
     vigilante_entrada: row.id_vigilante_entrada ? { nombre: row.vigilante_entrada_nombre } : null,
     dependencia_uso: { descripcion: row.dependencia_desc },
     inspeccion_pre: row.insp_id ? { id: row.insp_id, tipo_inspeccion: row.tipo_inspeccion, apto_para_operar: row.apto_para_operar, kilometraje: row.insp_km } : null,
+    inspeccion_post: row.insp_post_id ? { id: row.insp_post_id, kilometraje: row.insp_post_km } : null,
     fotos,
   }
 }
@@ -118,19 +121,19 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', allowRoles('ADMIN', 'CONDUCTOR'), async (req: Request, res: Response) => {
   const { id_vehiculo, id_conductor, id_inspeccion, fecha_salida, motivo_salida, lugar_destino, kilometraje_salida, firma, id_dependencia_uso, observaciones } = req.body
 
-  if (!id_vehiculo || !id_conductor || !motivo_salida || !lugar_destino || !id_dependencia_uso) {
+  if (!id_vehiculo || !id_conductor || !motivo_salida || !lugar_destino || !id_dependencia_uso || !id_inspeccion) {
     res.status(400).json({ error: 'Faltan campos requeridos' }); return
   }
 
   const error = await validarParaSalida(Number(id_vehiculo), Number(id_conductor))
   if (error) { res.status(422).json({ error }); return }
 
-  if (id_inspeccion) {
-    const insp = await queryOne<any>('SELECT * FROM ctv_inspecciones WHERE id = ?', [id_inspeccion])
-    if (!insp) { res.status(400).json({ error: 'Inspección preoperacional no encontrada' }); return }
-    if (!insp.apto_operar) { res.status(422).json({ error: 'Inspección preoperacional indica vehículo NO apto para operar' }); return }
-    if (insp.tipo_inspeccion !== 'PREOPERACIONAL') { res.status(400).json({ error: 'La inspección debe ser PREOPERACIONAL' }); return }
-  }
+  const insp = await queryOne<any>('SELECT * FROM ctv_inspecciones WHERE id = ?', [id_inspeccion])
+  if (!insp) { res.status(400).json({ error: 'Inspección preoperacional no encontrada' }); return }
+  if (!insp.apto_operar) { res.status(422).json({ error: 'Inspección preoperacional indica vehículo NO apto para operar' }); return }
+  if (insp.tipo_inspeccion !== 'PREOPERACIONAL') { res.status(400).json({ error: 'La inspección debe ser PREOPERACIONAL' }); return }
+  if (insp.id_vehiculo !== Number(id_vehiculo)) { res.status(400).json({ error: 'La inspección no corresponde al vehículo seleccionado' }); return }
+  if (insp.id_conductor !== Number(id_conductor)) { res.status(400).json({ error: 'La inspección no corresponde al conductor' }); return }
 
   const vehiculo = await queryOne<any>('SELECT placa_vehiculo FROM ctv_vehiculos WHERE id = ?', [id_vehiculo])
 

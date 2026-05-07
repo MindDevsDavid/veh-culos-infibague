@@ -5,7 +5,7 @@ import FormField from './FormField'
 import { inspeccionesApi } from '../api/inspecciones'
 import { useVehiculos } from '../hooks/useVehiculos'
 import { useConductores } from '../hooks/useConductores'
-import { useSalidas, useVehiculosOcupados } from '../hooks/useSalidas'
+import { useSalidas, useVehiculosOcupados, useSalida } from '../hooks/useSalidas'
 import { useAuth } from '../context/AuthContext'
 
 type Estado10  = 'BUENO' | 'REGULAR' | 'MALO'
@@ -63,6 +63,7 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
   const { data: conductores = [] } = useConductores()
   const { data: ocupados = [] } = useVehiculosOcupados()
   const { data: misSalidas = [] } = useSalidas()
+  const { data: salidaData } = useSalida(salidaId ?? 0)
 
   useEffect(() => {
     if (user?.rol === 'CONDUCTOR' && conductores.length > 0) {
@@ -71,6 +72,17 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
       if (mio) setForm(f => ({ ...f, id_conductor: String(mio.id) }))
     }
   }, [conductores, user])
+
+  useEffect(() => {
+    if (tipo === 'POSTOPERACIONAL' && salidaData) {
+      setForm(f => ({
+        ...f,
+        id_vehiculo: String((salidaData as any).vehiculo?.id ?? (salidaData as any).id_vehiculo ?? ''),
+        placa_vehiculo: (salidaData as any).vehiculo?.placa_vehiculo ?? (salidaData as any).placa_vehiculo ?? '',
+        id_conductor: String((salidaData as any).id_conductor ?? ''),
+      }))
+    }
+  }, [salidaData, tipo])
 
   function set(k: keyof typeof emptyForm) {
     return (v: string) => setForm(f => ({ ...f, [k]: v }))
@@ -95,6 +107,7 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
     const fd = new FormData()
     Object.entries(form).forEach(([k, v]) => fd.append(k, v))
     fd.set('tipo_inspeccion', tipo)
+    if (salidaId) fd.append('id_salida', String(salidaId))
     fotos.forEach(f => fd.append('fotos', f))
     try {
       const saved = await inspeccionesApi.create(fd)
@@ -106,33 +119,42 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
     }
   }
 
-  const salidaRetornando = tipo === 'PREOPERACIONAL'
-    ? misSalidas.find((s: any) => s.estado === 'RETORNANDO')
+  const ESTADOS_ACTIVOS = ['PENDIENTE', 'AUTORIZADA', 'INSPECCIONADA', 'EN_CURSO', 'RETORNANDO']
+  const salidaActiva = tipo === 'PREOPERACIONAL'
+    ? misSalidas.find((s: any) => ESTADOS_ACTIVOS.includes(s.estado))
     : null
-  const vehiculosDisponibles = vehiculos.filter(v => !ocupados.includes(v.id))
+  const vehiculosDisponibles = tipo === 'POSTOPERACIONAL'
+    ? vehiculos
+    : vehiculos.filter(v => !ocupados.includes(v.id))
 
-  if (tipo === 'PREOPERACIONAL' && salidaRetornando) {
+  if (tipo === 'PREOPERACIONAL' && salidaActiva) {
+    const esRetornando = salidaActiva.estado === 'RETORNANDO'
     return (
       <div className="max-w-lg mx-auto">
         <div className="card p-8 text-center space-y-5">
-          <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
-            <svg className="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto ${esRetornando ? 'bg-amber-100' : 'bg-red-100'}`}>
+            <svg className={`w-7 h-7 ${esRetornando ? 'text-amber-600' : 'text-red-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-800">Postoperacional pendiente</h2>
+            <h2 className="text-lg font-bold text-slate-800">
+              {esRetornando ? 'Postoperacional pendiente' : 'Ya tienes un viaje activo'}
+            </h2>
             <p className="text-sm text-slate-500 mt-1">
-              Tenés un viaje que regresó y aún no completaste la inspección postoperacional.
-              Debés hacerlo antes de iniciar otro viaje.
+              {esRetornando
+                ? 'Tienes un viaje que regresó y aún no completaste la inspección postoperacional. Debes hacerlo antes de iniciar otro viaje.'
+                : 'No puedes iniciar un nuevo preoperacional mientras tienes un viaje en curso. Espera a que finalice el viaje actual.'}
             </p>
             <p className="text-sm font-mono font-medium text-slate-700 mt-2">
-              Vehículo: {(salidaRetornando as any).placa_vehiculo} — {(salidaRetornando as any).lugar_destino}
+              Vehículo: {(salidaActiva as any).placa_vehiculo} — {(salidaActiva as any).lugar_destino}
             </p>
           </div>
-          <Link to={`/conductor/inspeccion/${salidaRetornando.id}/post`} className="inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">
-            Completar inspección postoperacional
-          </Link>
+          {esRetornando && (
+            <Link to={`/conductor/inspeccion/${salidaActiva.id}/post`} className="inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg">
+              Completar inspección postoperacional
+            </Link>
+          )}
         </div>
       </div>
     )
@@ -153,7 +175,7 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
             </h2>
             <p className="text-slate-500 mt-1">
               {tipo === 'PREOPERACIONAL'
-                ? 'Ahora podés solicitar el viaje usando esta inspección.'
+                ? 'Ahora puedes solicitar el viaje usando esta inspección.'
                 : 'El viaje ha sido marcado como completado.'}
             </p>
           </div>
@@ -191,10 +213,14 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-slate-600">Vehículo<span className="text-red-500 ml-0.5">*</span></label>
-              <select value={form.id_vehiculo} onChange={onVehiculoChange} className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Seleccionar...</option>
-                {vehiculosDisponibles.map(v => <option key={v.id} value={v.id}>{v.placa_vehiculo} — {v.linea}</option>)}
-              </select>
+              {tipo === 'POSTOPERACIONAL' ? (
+                <input readOnly value={(form.placa_vehiculo || vehiculos.find(v => String(v.id) === form.id_vehiculo)?.placa_vehiculo) ?? ''} className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm bg-slate-50 text-slate-500 cursor-default" />
+              ) : (
+                <select value={form.id_vehiculo} onChange={onVehiculoChange} className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Seleccionar...</option>
+                  {vehiculosDisponibles.map(v => <option key={v.id} value={v.id}>{v.placa_vehiculo} — {v.linea}</option>)}
+                </select>
+              )}
             </div>
             <div>
               <label className="text-xs font-medium text-slate-600">Conductor<span className="text-red-500 ml-0.5">*</span></label>
