@@ -16,8 +16,9 @@ export default function AutorizadorConductores() {
       return <span className={v < hoy ? 'text-red-600 font-medium' : ''}>{v.toLocaleDateString('es-CO')}</span>
     }},
     { key: 'autorizacion_th', header: 'TH', render: c => {
-      const ok = c.autorizacion_th === 1 && (!c.fecha_vence_th || new Date(c.fecha_vence_th) >= hoy)
-      return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{ok ? 'Vigente' : 'Vencida'}</span>
+      const tieneNum = !!c.autorizacion_th
+      const vigente = tieneNum && (!c.fecha_vence_th || new Date(c.fecha_vence_th) >= hoy)
+      return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${vigente ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{tieneNum ? c.autorizacion_th : 'Sin auth'}</span>
     }},
     { key: 'dependencia', header: 'Dependencia', render: c => c.dependencia?.descripcion ?? '' },
   ]

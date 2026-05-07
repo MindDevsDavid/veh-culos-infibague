@@ -42,7 +42,7 @@ export interface Conductor {
   licencia_conduccion: string
   categoria_licencia: string
   fecha_vence_licencia: string
-  autorizacion_th: number
+  autorizacion_th: string | null
   fecha_autorizacion_th?: string
   fecha_vence_th?: string
   telefono?: number

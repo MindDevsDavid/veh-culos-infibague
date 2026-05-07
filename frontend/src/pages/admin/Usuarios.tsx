@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, RotateCcw } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import DataTable from '../../components/DataTable'
@@ -10,10 +10,10 @@ import { usuariosApi } from '../../api/usuarios'
 import type { Usuario } from '../../api/usuarios'
 import type { Rol } from '../../types'
 
-const ROLES: Rol[] = ['ADMIN', 'CONDUCTOR', 'AUTORIZADOR', 'VIGILANTE', 'CONSULTAS']
+const ROLES: Rol[] = ['ADMIN', 'AUTORIZADOR', 'VIGILANTE', 'CONSULTAS']
 const ROL_LABEL: Record<Rol, string> = { ADMIN: 'Administrador', CONDUCTOR: 'Conductor', AUTORIZADOR: 'Autorizador', VIGILANTE: 'Vigilante', CONSULTAS: 'Consultas' }
 
-const empty = { nombre: '', email: '', password: '', rol: 'CONDUCTOR' as Rol, activo: 'true' }
+const empty = { nombre: '', email: '', password: '', rol: 'AUTORIZADOR' as Rol, activo: 'true' }
 type FormState = typeof empty
 
 export default function AdminUsuarios() {
@@ -31,7 +31,7 @@ export default function AdminUsuarios() {
   function openCreate() { setForm(empty); setEditing(null); setModal('create') }
   function openEdit(u: Usuario) {
     setEditing(u)
-    setForm({ nombre: u.nombre, email: u.email, password: '', rol: u.rol, activo: String(u.activo) })
+    setForm({ nombre: u.nombre, email: u.email, password: '', rol: u.rol, activo: u.activo ? 'true' : 'false' })
     setModal('edit')
   }
 
@@ -84,8 +84,10 @@ export default function AdminUsuarios() {
         actions={u => (
           <div className="flex items-center justify-end gap-1">
             <button onClick={() => openEdit(u)} className="p-1.5 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600"><Pencil size={15} /></button>
-            {u.activo && (
-              <button onClick={async () => { if (confirm(`¿Desactivar a ${u.nombre}?`)) await del_.mutateAsync(u.id) }} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 size={15} /></button>
+            {u.activo ? (
+              <button onClick={async () => { if (confirm(`¿Desactivar a ${u.nombre}?`)) await del_.mutateAsync(u.id) }} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600" title="Desactivar"><Trash2 size={15} /></button>
+            ) : (
+              <button onClick={async () => { if (confirm(`¿Reactivar a ${u.nombre}?`)) await upd.mutateAsync({ id: u.id, data: { nombre: u.nombre, email: u.email, rol: u.rol, activo: true } }) }} className="p-1.5 rounded-lg text-slate-400 hover:bg-green-50 hover:text-green-600" title="Reactivar"><RotateCcw size={15} /></button>
             )}
           </div>
         )}

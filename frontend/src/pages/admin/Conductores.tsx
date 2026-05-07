@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import DataTable from '../../components/DataTable'
 import type { Column } from '../../components/DataTable'
@@ -10,8 +11,9 @@ import type { Conductor } from '../../types'
 
 const empty = {
   nombre_conductor: '', cedula_conductor: '', licencia_conduccion: '', categoria_licencia: '',
-  fecha_vence_licencia: '', autorizacion_th: '0', fecha_autorizacion_th: '', fecha_vence_th: '',
+  fecha_vence_licencia: '', autorizacion_th: '', fecha_autorizacion_th: '', fecha_vence_th: '',
   telefono: '', id_dependencia_conductor: '',
+  email: '', password: '', password_confirm: '',
 }
 type FormState = typeof empty
 
@@ -48,9 +50,14 @@ export default function AdminConductores() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (modal === 'create' && form.password !== form.password_confirm) {
+      toast.error('Las contraseñas no coinciden')
+      return
+    }
+    const { password_confirm, ...rest } = form
     const payload = {
-      ...form,
-      autorizacion_th: Number(form.autorizacion_th),
+      ...rest,
+      autorizacion_th: form.autorizacion_th || null,
       telefono: form.telefono ? Number(form.telefono) : undefined,
       id_dependencia_conductor: Number(form.id_dependencia_conductor),
     }
@@ -73,10 +80,11 @@ export default function AdminConductores() {
       return <span className={vencida ? 'text-red-600 font-medium' : ''}>{v.toLocaleDateString('es-CO')}{vencida && ' ⚠'}</span>
     }},
     { key: 'autorizacion_th', header: 'TH', render: c => {
-      const ok = c.autorizacion_th === 1 && (!c.fecha_vence_th || new Date(c.fecha_vence_th) >= hoy)
+      const tieneNum = !!c.autorizacion_th
+      const vigente = tieneNum && (!c.fecha_vence_th || new Date(c.fecha_vence_th) >= hoy)
       return (
-        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          {ok ? 'Vigente' : 'Vencida'}
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${vigente ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {tieneNum ? c.autorizacion_th : 'Sin auth'}
         </span>
       )
     }},
@@ -84,7 +92,7 @@ export default function AdminConductores() {
   ]
 
   const isPending = create.isPending || update.isPending
-  const vencidasCount = conductores.filter(c => c.autorizacion_th !== 1 || (c.fecha_vence_th && new Date(c.fecha_vence_th) < hoy)).length
+  const vencidasCount = conductores.filter(c => !c.autorizacion_th || (c.fecha_vence_th && new Date(c.fecha_vence_th) < hoy)).length
 
   return (
     <div className="space-y-5">
@@ -125,12 +133,15 @@ export default function AdminConductores() {
           </div>
           <FormField label="Cédula" required value={form.cedula_conductor} onChange={set('cedula_conductor')} />
           <FormField label="Licencia No." required value={form.licencia_conduccion} onChange={set('licencia_conduccion')} />
+          {modal === 'create' && <>
+            <FormField label="Email (acceso al sistema)" type="email" required value={form.email} onChange={set('email')} placeholder="conductor@ejemplo.com" />
+            <div />
+            <FormField label="Contraseña" type="password" required value={form.password} onChange={set('password')} />
+            <FormField label="Confirmar contraseña" type="password" required value={form.password_confirm} onChange={set('password_confirm')} />
+          </>}
           <FormField label="Categoría licencia" required value={form.categoria_licencia} onChange={set('categoria_licencia')} placeholder="B1, C1, C2..." />
           <FormField label="Vence licencia" type="date" required value={form.fecha_vence_licencia} onChange={set('fecha_vence_licencia')} />
-          <FormField as="select" label="Autorización TH" value={form.autorizacion_th} onChange={set('autorizacion_th')}>
-            <option value="1">Sí</option>
-            <option value="0">No</option>
-          </FormField>
+          <FormField label="No. Autorización TH" value={form.autorizacion_th} onChange={set('autorizacion_th')} placeholder="Ej: TH-2024-001" />
           <FormField label="Fecha autorización TH" type="date" value={form.fecha_autorizacion_th} onChange={set('fecha_autorizacion_th')} />
           <FormField label="Fecha vence TH" type="date" value={form.fecha_vence_th} onChange={set('fecha_vence_th')} />
           <FormField label="Teléfono" type="number" value={form.telefono} onChange={set('telefono')} />
