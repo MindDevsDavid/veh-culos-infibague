@@ -2,7 +2,7 @@ import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { toast } from 'sonner'
-import { Truck } from 'lucide-react'
+import { Truck, AlertOctagon } from 'lucide-react'
 
 export default function Login() {
   const { login } = useAuth()
@@ -10,15 +10,22 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [licenciaVencida, setLicenciaVencida] = useState<{ nombre: string; fecha: string } | null>(null)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    setLicenciaVencida(null)
     setLoading(true)
     try {
       await login(email, password)
       navigate('/', { replace: true })
-    } catch {
-      toast.error('Credenciales inválidas')
+    } catch (err: any) {
+      const data = err?.response?.data
+      if (data?.error === 'LICENCIA_VENCIDA') {
+        setLicenciaVencida({ nombre: data.nombre, fecha: data.fecha_vence })
+      } else {
+        toast.error('Credenciales inválidas')
+      }
     } finally {
       setLoading(false)
     }
@@ -36,6 +43,20 @@ export default function Login() {
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Control de Vehículos</h1>
             <p className="text-slate-500 text-sm mt-2 font-medium">INFIbagué</p>
           </div>
+
+          {licenciaVencida && (
+            <div className="mb-6 bg-red-50 border-2 border-red-400 rounded-xl p-4 flex flex-col items-center gap-2 text-center">
+              <AlertOctagon size={32} className="text-red-600 shrink-0" />
+              <p className="text-base font-bold text-red-700">Licencia Vencida</p>
+              <p className="text-sm text-red-600">
+                {licenciaVencida.nombre}, tu licencia de conducción venció el{' '}
+                <span className="font-semibold">
+                  {new Date(licenciaVencida.fecha).toLocaleDateString('es-CO')}
+                </span>
+                . Renueva tu licencia para poder ingresar al sistema.
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>

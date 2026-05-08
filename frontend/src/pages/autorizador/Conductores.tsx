@@ -1,3 +1,4 @@
+import { AlertTriangle } from 'lucide-react'
 import DataTable from '../../components/DataTable'
 import type { Column } from '../../components/DataTable'
 import { useConductores } from '../../hooks/useConductores'
@@ -6,6 +7,13 @@ import type { Conductor } from '../../types'
 export default function AutorizadorConductores() {
   const { data: conductores = [], isLoading } = useConductores()
   const hoy = new Date()
+  const en30dias = new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000)
+  const vencidasLicencia = conductores.filter(c => c.fecha_vence_licencia && new Date(c.fecha_vence_licencia) < hoy)
+  const proximasLicencia = conductores.filter(c => {
+    if (!c.fecha_vence_licencia) return false
+    const v = new Date(c.fecha_vence_licencia)
+    return v >= hoy && v <= en30dias
+  })
 
   const columns: Column<Conductor>[] = [
     { key: 'nombre_conductor', header: 'Nombre' },
@@ -29,6 +37,37 @@ export default function AutorizadorConductores() {
         <h1 className="text-xl font-bold text-slate-800">Conductores</h1>
         <p className="text-sm text-slate-500">{conductores.length} conductores</p>
       </div>
+
+      {vencidasLicencia.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2 text-sm text-red-800">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold">Licencias vencidas:</span>{' '}
+            {vencidasLicencia.map((c, i) => (
+              <span key={c.id}>
+                {c.nombre_conductor} <span className="text-red-600">({new Date(c.fecha_vence_licencia).toLocaleDateString('es-CO')})</span>
+                {i < vencidasLicencia.length - 1 ? ', ' : ''}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {proximasLicencia.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2 text-sm text-amber-800">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold">Licencias próximas a vencer (≤30 días):</span>{' '}
+            {proximasLicencia.map((c, i) => (
+              <span key={c.id}>
+                {c.nombre_conductor} <span className="text-amber-600">({new Date(c.fecha_vence_licencia).toLocaleDateString('es-CO')})</span>
+                {i < proximasLicencia.length - 1 ? ', ' : ''}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <DataTable columns={columns} data={conductores} keyField="id" loading={isLoading}
         searchable searchPlaceholder="Buscar nombre, cédula..."
         searchFilter={(c, q) => [c.nombre_conductor, c.cedula_conductor].join(' ').toLowerCase().includes(q.toLowerCase())}

@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
-import { query, queryOne, run } from '../utils/db'
-import pool from '../utils/db'
+import { query, queryOne, run, transaction } from '../utils/db'
 import { authenticate } from '../middleware/auth'
 import { allowRoles } from '../middleware/roles'
 
@@ -51,16 +50,14 @@ router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
   const emailExists = await queryOne('SELECT id FROM usuarios WHERE email = ?', [email])
   if (emailExists) { res.status(409).json({ error: 'El email ya está registrado' }); return }
 
-  const conn = await pool.getConnection()
-  try {
-    await conn.beginTransaction()
+  const hash = await bcrypt.hash(password, 10)
 
-    const hash = await bcrypt.hash(password, 10)
+  const condId = await transaction(async conn => {
     const [userResult] = await conn.query(
       'INSERT INTO usuarios (nombre, email, password_hash, rol, activo, modifica_u) VALUES (?, ?, ?, ?, 1, ?)',
       [nombre_conductor, email, hash, 'CONDUCTOR', req.user!.email],
     ) as any
-    const id_usuario = userResult.insertId
+    const id_usuario = (userResult as any).insertId
 
     const [condResult] = await conn.query(
       `INSERT INTO ctv_conductores
@@ -76,16 +73,11 @@ router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
         req.user!.email,
       ],
     ) as any
+    return (condResult as any).insertId
+  })
 
-    await conn.commit()
-    const row = await queryOne(SELECT_CONDUCTOR + ' WHERE c.id = ?', [condResult.insertId])
-    res.status(201).json(mapConductor(row))
-  } catch (err) {
-    await conn.rollback()
-    throw err
-  } finally {
-    conn.release()
-  }
+  const row = await queryOne(SELECT_CONDUCTOR + ' WHERE c.id = ?', [condId])
+  res.status(201).json(mapConductor(row))
 })
 
 router.put('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {

@@ -25,6 +25,17 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     return
   }
 
+  if (user.rol === 'CONDUCTOR') {
+    const conductor = await queryOne<any>(
+      'SELECT fecha_vence_licencia FROM ctv_conductores WHERE id_usuario = ? LIMIT 1',
+      [user.id]
+    )
+    if (conductor?.fecha_vence_licencia && new Date(conductor.fecha_vence_licencia) < new Date()) {
+      res.status(403).json({ error: 'LICENCIA_VENCIDA', nombre: user.nombre, fecha_vence: conductor.fecha_vence_licencia })
+      return
+    }
+  }
+
   const payload: AuthPayload = { sub: user.id, email: user.email, rol: user.rol, nombre: user.nombre }
   const accessToken = signAccessToken(payload)
   const refreshToken = signRefreshToken(payload)

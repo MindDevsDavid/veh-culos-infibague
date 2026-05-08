@@ -69,6 +69,13 @@ export default function AdminConductores() {
   }
 
   const hoy = new Date()
+  const en30dias = new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000)
+  const vencidasLicencia = conductores.filter(c => c.fecha_vence_licencia && new Date(c.fecha_vence_licencia) < hoy)
+  const proximasLicencia = conductores.filter(c => {
+    if (!c.fecha_vence_licencia) return false
+    const v = new Date(c.fecha_vence_licencia)
+    return v >= hoy && v <= en30dias
+  })
 
   const columns: Column<Conductor>[] = [
     { key: 'nombre_conductor', header: 'Nombre' },
@@ -110,6 +117,36 @@ export default function AdminConductores() {
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-amber-800">
           <AlertTriangle size={16} className="shrink-0" />
           {vencidasCount} conductor(es) con TH vencida o sin autorización.
+        </div>
+      )}
+
+      {vencidasLicencia.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2 text-sm text-red-800">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold">Licencias vencidas:</span>{' '}
+            {vencidasLicencia.map((c, i) => (
+              <span key={c.id}>
+                {c.nombre_conductor} <span className="text-red-600">({new Date(c.fecha_vence_licencia).toLocaleDateString('es-CO')})</span>
+                {i < vencidasLicencia.length - 1 ? ', ' : ''}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {proximasLicencia.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2 text-sm text-amber-800">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold">Licencias próximas a vencer (≤30 días):</span>{' '}
+            {proximasLicencia.map((c, i) => (
+              <span key={c.id}>
+                {c.nombre_conductor} <span className="text-amber-600">({new Date(c.fecha_vence_licencia).toLocaleDateString('es-CO')})</span>
+                {i < proximasLicencia.length - 1 ? ', ' : ''}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
