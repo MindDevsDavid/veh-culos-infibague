@@ -32,6 +32,7 @@ export interface Vehiculo {
   marca?: { descripcion: string }
   color?: { descripcion: string }
   dependencia?: { descripcion: string }
+  requisitos?: ControlRequisito[]
 }
 
 export interface Conductor {

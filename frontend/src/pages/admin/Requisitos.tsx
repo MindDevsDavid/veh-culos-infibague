@@ -7,6 +7,7 @@ import type { Column } from '../../components/DataTable'
 import Modal from '../../components/Modal'
 import FormField from '../../components/FormField'
 import StatusBadge, { MAPS } from '../../components/StatusBadge'
+import api from '../../api/client'
 import { requisitosApi } from '../../api/requisitos'
 import type { ControlRequisito } from '../../types'
 import { useVehiculos } from '../../hooks/useVehiculos'
@@ -34,7 +35,15 @@ export default function AdminRequisitos() {
     onError: (e: any) => toast.error(e.response?.data?.error ?? 'Error'),
   })
 
+  const createTipo = useMutation({
+    mutationFn: (descripcion: string) => import('../../api/client').then(m => m.default.post('/catalogos/tipos-requisito', { descripcion })),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['tiposRequisito'] }); toast.success('Tipo de documento creado') },
+    onError: (e: any) => toast.error(e.response?.data?.error ?? 'Error'),
+  })
+
   const [modal, setModal] = useState(false)
+  const [modalTipo, setModalTipo] = useState(false)
+  const [nuevoTipo, setNuevoTipo] = useState('')
   const [form, setForm] = useState(empty)
   const [archivo, setArchivo] = useState<File | null>(null)
 
@@ -88,9 +97,14 @@ export default function AdminRequisitos() {
           <h1 className="text-xl font-bold text-slate-800">Requisitos / Documentos</h1>
           <p className="text-sm text-slate-500">{items.length} documentos registrados</p>
         </div>
-        <button onClick={() => setModal(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
-          <Plus size={16} /> Nuevo documento
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setNuevoTipo(''); setModalTipo(true) }} className="flex items-center gap-2 bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+            <Plus size={16} /> Nuevo tipo de documento
+          </button>
+          <button onClick={() => setModal(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+            <Plus size={16} /> Nuevo documento
+          </button>
+        </div>
       </div>
 
       {vencidos > 0 && (
@@ -111,15 +125,37 @@ export default function AdminRequisitos() {
         searchFilter={(r, q) => [r.tipo_requisito?.descripcion ?? '', r.numero_requisito, r.empresa_expide].join(' ').toLowerCase().includes(q.toLowerCase())}
         actions={r => (
           <div className="flex items-center justify-end gap-1">
-            <a href={requisitosApi.archivoUrl(r.id)} target="_blank" rel="noopener noreferrer"
-              className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Ver documento">
+            <button
+              title="Ver documento"
+              className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              onClick={async () => {
+                try {
+                  const res = await api.get(requisitosApi.archivoUrl(r.id), { responseType: 'blob' })
+                  const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+                  const w = window.open(url, '_blank')
+                  if (w) w.addEventListener('beforeunload', () => URL.revokeObjectURL(url))
+                } catch { toast.error('No hay archivo adjunto') }
+              }}
+            >
               <ExternalLink size={15} />
-            </a>
+            </button>
             <button onClick={async () => { if (confirm('¿Eliminar este documento?')) await del_.mutateAsync(r.id) }}
               className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 size={15} /></button>
           </div>
         )}
       />
+
+      <Modal open={modalTipo} onClose={() => setModalTipo(false)} title="Nuevo Tipo de Documento" size="sm">
+        <form onSubmit={async e => { e.preventDefault(); if (!nuevoTipo.trim()) return; try { await createTipo.mutateAsync(nuevoTipo.trim()); setModalTipo(false) } catch { /* toast */ } }} className="space-y-4">
+          <FormField label="Tipo de documento" required value={nuevoTipo} onChange={e => setNuevoTipo(e.target.value)} placeholder="Ej: SOAT, Revisión técnico-mecánica..." />
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => setModalTipo(false)} className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">Cancelar</button>
+            <button type="submit" disabled={createTipo.isPending} className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
+              {createTipo.isPending ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <Modal open={modal} onClose={() => setModal(false)} title="Nuevo Documento" size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">

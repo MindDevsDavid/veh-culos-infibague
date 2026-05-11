@@ -40,6 +40,12 @@ router.get('/', allowRoles('ADMIN', 'AUTORIZADOR', 'ALMACENISTA', 'CONDUCTOR', '
   res.json(rows.map(mapT))
 })
 
+router.get('/:id', allowRoles('ADMIN', 'AUTORIZADOR', 'ALMACENISTA', 'CONDUCTOR', 'CONSULTAS'), async (req: Request, res: Response) => {
+  const row = await queryOne(SELECT_T + ' WHERE t.id = ?', [req.params.id])
+  if (!row) { res.status(404).json({ error: 'Tanqueo no encontrado' }); return }
+  res.json(mapT(row))
+})
+
 // CONDUCTOR solicita tanqueo — auto-fill desde viaje activo
 router.post('/solicitar', allowRoles('CONDUCTOR', 'ADMIN'), async (req: Request, res: Response) => {
   const { tipo_combustible, cantidad_galones } = req.body

@@ -33,6 +33,7 @@ router.get('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
 router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
   const { numero_chip, id_vehiculo, estado } = req.body
   if (!numero_chip) { res.status(400).json({ error: 'numero_chip requerido' }); return }
+  if (numero_chip.length > 15) { res.status(400).json({ error: 'numero_chip no puede superar 15 caracteres' }); return }
   const vehiculoId = id_vehiculo ? Number(id_vehiculo) : null
   const estado_chip = vehiculoId ? 'INSTALADO' : 'NO_INSTALADO'
   const r = await run(
@@ -45,6 +46,7 @@ router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
 
 router.put('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
   const { numero_chip, id_vehiculo, estado } = req.body
+  if (numero_chip && numero_chip.length > 15) { res.status(400).json({ error: 'numero_chip no puede superar 15 caracteres' }); return }
   const vehiculoId = id_vehiculo ? Number(id_vehiculo) : null
   const estado_chip = vehiculoId ? 'INSTALADO' : 'NO_INSTALADO'
   await run(

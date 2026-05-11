@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Truck, Users, Wrench, FileText, Cpu, Package,
   Fuel, ArrowRightLeft, History, UserCog, ClipboardList, CheckSquare,
-  LogOut, Menu, X,
+  LogOut, Menu, X, Info, BookOpen,
 } from 'lucide-react'
 
 interface NavItem {
@@ -27,6 +27,7 @@ const NAV: Record<string, NavItem[]> = {
     { to: '/admin/historial',    label: 'Historial',      icon: <History size={18} /> },
     { to: '/admin/usuarios',      label: 'Usuarios',       icon: <UserCog size={18} /> },
     { to: '/admin/inspecciones',  label: 'Inspecciones',   icon: <CheckSquare size={18} /> },
+    { to: '/admin/catalogos',     label: 'Catálogos',      icon: <BookOpen size={18} /> },
   ],
   CONDUCTOR: [
     { to: '/conductor/solicitudes', label: 'Mis Solicitudes', icon: <ClipboardList size={18} /> },
@@ -79,6 +80,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(false)
 
   useEffect(() => { setMobileOpen(false) }, [location.pathname])
 
@@ -100,6 +102,23 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100">
+      {aboutOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setAboutOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 text-center" onClick={e => e.stopPropagation()}>
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-md mb-5">
+              <Truck className="text-white" size={28} />
+            </div>
+            <h2 className="text-lg font-bold text-slate-800 mb-1">Sistema de Control de Vehículos</h2>
+            <p className="text-sm text-slate-500 mb-6">INFIbagué</p>
+            <div className="bg-slate-50 rounded-xl px-5 py-4 text-sm text-slate-700 space-y-2 text-left">
+              <div><span className="font-semibold text-slate-500 text-xs uppercase tracking-wide">Creado por</span><p className="mt-0.5">Grupo de Gestión Tecnológica y Transformación Digital</p></div>
+              <div><span className="font-semibold text-slate-500 text-xs uppercase tracking-wide">Diseño y desarrollo</span><p className="mt-0.5">David Alejandro Gutiérrez Hernández</p></div>
+            </div>
+            <button onClick={() => setAboutOpen(false)} className="mt-5 px-5 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700">Cerrar</button>
+          </div>
+        </div>
+      )}
+
       {/* Mobile backdrop */}
       {mobileOpen && (
         <div
@@ -146,6 +165,16 @@ export default function Layout({ children }: { children: ReactNode }) {
               )}
             </NavLink>
           ))}
+          {user?.rol === 'ADMIN' && (
+            <button
+              onClick={() => setAboutOpen(true)}
+              title={!showLabels ? 'Acerca de' : undefined}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all duration-150 mt-1"
+            >
+              <span className="shrink-0 text-slate-500"><Info size={18} /></span>
+              {showLabels && <span className="truncate">Acerca de</span>}
+            </button>
+          )}
         </nav>
 
         {/* User info */}

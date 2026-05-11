@@ -1,7 +1,5 @@
 import { Router, Request, Response } from 'express'
-import path from 'path'
-import fs from 'fs'
-import { query, queryOne, run } from '../utils/db'
+import { query, queryOne, run, transaction } from '../utils/db'
 import { authenticate } from '../middleware/auth'
 import { allowRoles } from '../middleware/roles'
 import { uploadPdf } from '../middleware/upload'
@@ -63,10 +61,17 @@ router.post('/', allowRoles('ADMIN'), uploadPdf.single('archivo'), async (req: R
   )
 
   if (req.file) {
-    await run(
-      'INSERT INTO ctv_pdfs (nombre_tabla, id_tabla, ruta_base, ruta_logica, nombre_archivo, modifica_u) VALUES (?, ?, ?, ?, ?, ?)',
-      ['ctv_control_requisitos', r.insertId, req.file.destination, req.file.path, req.file.filename, req.user!.email],
-    )
+    const fileBuffer = req.file.buffer
+    const fileName = req.file.originalname
+    const insertId = r.insertId
+    const email = req.user!.email
+    await transaction(async conn => {
+      await conn.query('SET SESSION max_allowed_packet = 67108864')
+      await conn.query(
+        'INSERT INTO ctv_pdfs (nombre_tabla, id_tabla, nombre_archivo, contenido, modifica_u) VALUES (?, ?, ?, ?, ?)',
+        ['ctv_control_requisitos', insertId, fileName, fileBuffer, email],
+      )
+    })
   }
 
   const row = await queryOne(SELECT_REQ + ' WHERE r.id = ?', [r.insertId])
@@ -95,15 +100,20 @@ router.put('/:id', allowRoles('ADMIN'), uploadPdf.single('archivo'), async (req:
   )
 
   if (req.file) {
-    const old = await queryOne<any>("SELECT * FROM ctv_pdfs WHERE nombre_tabla='ctv_control_requisitos' AND id_tabla=?", [id])
-    if (old) {
-      fs.unlink(old.ruta_logica, () => {})
-      await run('UPDATE ctv_pdfs SET ruta_base=?, ruta_logica=?, nombre_archivo=?, modifica_u=? WHERE id=?',
-        [req.file.destination, req.file.path, req.file.filename, req.user!.email, old.id])
-    } else {
-      await run('INSERT INTO ctv_pdfs (nombre_tabla, id_tabla, ruta_base, ruta_logica, nombre_archivo, modifica_u) VALUES (?, ?, ?, ?, ?, ?)',
-        ['ctv_control_requisitos', id, req.file.destination, req.file.path, req.file.filename, req.user!.email])
-    }
+    const fileBuffer = req.file.buffer
+    const fileName = req.file.originalname
+    const email = req.user!.email
+    const old = await queryOne<any>("SELECT id FROM ctv_pdfs WHERE nombre_tabla='ctv_control_requisitos' AND id_tabla=?", [id])
+    await transaction(async conn => {
+      await conn.query('SET SESSION max_allowed_packet = 67108864')
+      if (old) {
+        await conn.query('UPDATE ctv_pdfs SET nombre_archivo=?, contenido=?, modifica_u=? WHERE id=?',
+          [fileName, fileBuffer, email, old.id])
+      } else {
+        await conn.query('INSERT INTO ctv_pdfs (nombre_tabla, id_tabla, nombre_archivo, contenido, modifica_u) VALUES (?, ?, ?, ?, ?)',
+          ['ctv_control_requisitos', id, fileName, fileBuffer, email])
+      }
+    })
   }
 
   const row = await queryOne(SELECT_REQ + ' WHERE r.id = ?', [id])
@@ -112,19 +122,17 @@ router.put('/:id', allowRoles('ADMIN'), uploadPdf.single('archivo'), async (req:
 
 router.delete('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
   const id = Number(req.params.id)
-  const pdf = await queryOne<any>("SELECT * FROM ctv_pdfs WHERE nombre_tabla='ctv_control_requisitos' AND id_tabla=?", [id])
-  if (pdf) {
-    fs.unlink(pdf.ruta_logica, () => {})
-    await run('DELETE FROM ctv_pdfs WHERE id = ?', [pdf.id])
-  }
+  await run("DELETE FROM ctv_pdfs WHERE nombre_tabla='ctv_control_requisitos' AND id_tabla=?", [id])
   await run('DELETE FROM ctv_control_requisitos WHERE id = ?', [id])
   res.json({ ok: true })
 })
 
 router.get('/:id/archivo', allowRoles('ADMIN', 'AUTORIZADOR'), async (req: Request, res: Response) => {
-  const pdf = await queryOne<any>("SELECT * FROM ctv_pdfs WHERE nombre_tabla='ctv_control_requisitos' AND id_tabla=?", [req.params.id])
-  if (!pdf) { res.status(404).json({ error: 'Archivo no encontrado' }); return }
-  res.sendFile(path.resolve(pdf.ruta_logica))
+  const pdf = await queryOne<any>("SELECT nombre_archivo, contenido FROM ctv_pdfs WHERE nombre_tabla='ctv_control_requisitos' AND id_tabla=?", [req.params.id])
+  if (!pdf || !pdf.contenido) { res.status(404).json({ error: 'Archivo no encontrado' }); return }
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', `inline; filename="${pdf.nombre_archivo}"`)
+  res.send(pdf.contenido)
 })
 
 export default router

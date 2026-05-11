@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import DataTable from '../../components/DataTable'
 import type { Column } from '../../components/DataTable'
@@ -11,6 +11,71 @@ import { useMarcas, useColores, useTiposVehiculo, useDependencias } from '../../
 import type { Vehiculo } from '../../types'
 
 const COMBUSTIBLE = ['GASOLINA', 'DIESEL', 'GAS', 'ELECTRICO', 'HIBRIDO']
+
+function VehiculoDetail({ v }: { v: Vehiculo }) {
+  const today = new Date()
+  const reqs = v.requisitos ?? []
+  const hasVencido = reqs.some(r => r.estado_requisito === 'VENCIDO')
+
+  function expiryClass(fecha: string) {
+    const d = new Date(fecha)
+    const diff = (d.getTime() - today.getTime()) / 86400000
+    if (diff < 0) return 'text-red-600 font-medium'
+    if (diff <= 30) return 'text-amber-600 font-medium'
+    return 'text-slate-700'
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+        <div><span className="text-slate-500">Línea</span><p className="font-medium">{v.linea}</p></div>
+        <div><span className="text-slate-500">Marca</span><p className="font-medium">{v.marca?.descripcion ?? '—'}</p></div>
+        <div><span className="text-slate-500">Tipo</span><p className="font-medium">{v.tipo_vehiculo?.descripcion ?? '—'}</p></div>
+        <div><span className="text-slate-500">Año</span><p className="font-medium">{v.anno}</p></div>
+        <div><span className="text-slate-500">Combustible</span><p className="font-medium">{v.tipo_combustible}</p></div>
+        <div><span className="text-slate-500">Estado</span><p><StatusBadge value={v.estado} map={MAPS.ESTADO_VEHICULO} /></p></div>
+        <div><span className="text-slate-500">Dependencia</span><p className="font-medium">{v.dependencia?.descripcion ?? '—'}</p></div>
+      </div>
+
+      <hr className="border-slate-200" />
+
+      <div>
+        <h3 className="text-sm font-semibold text-slate-700 mb-2">Documentos / Requisitos</h3>
+        {hasVencido && (
+          <div className="mb-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2">
+            Este vehículo tiene documentos vencidos.
+          </div>
+        )}
+        {reqs.length === 0 ? (
+          <p className="text-sm text-slate-400 italic">Sin documentos registrados.</p>
+        ) : (
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-slate-500 border-b border-slate-200">
+                <th className="pb-1 pr-3 font-medium">Tipo</th>
+                <th className="pb-1 pr-3 font-medium">Número</th>
+                <th className="pb-1 pr-3 font-medium">Entidad</th>
+                <th className="pb-1 pr-3 font-medium">Vencimiento</th>
+                <th className="pb-1 font-medium">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reqs.map(r => (
+                <tr key={r.id} className="border-b border-slate-100 last:border-0">
+                  <td className="py-1.5 pr-3 text-slate-700">{r.tipo_requisito?.descripcion ?? '—'}</td>
+                  <td className="py-1.5 pr-3 font-mono text-slate-700">{r.numero_requisito}</td>
+                  <td className="py-1.5 pr-3 text-slate-700">{r.empresa_expide}</td>
+                  <td className={`py-1.5 pr-3 ${expiryClass(r.fecha_vencimiento)}`}>{r.fecha_vencimiento?.slice(0, 10)}</td>
+                  <td className="py-1.5"><StatusBadge value={r.estado_requisito} map={MAPS.ESTADO_REQUISITO} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}
 
 const empty = {
   id_tipo_vehiculo: '', id_marca: '', placa_vehiculo: '', linea: '', anno: '',
@@ -36,6 +101,7 @@ export default function AdminVehiculos() {
   const [modal, setModal] = useState<'create' | 'edit' | null>(null)
   const [editing, setEditing] = useState<Vehiculo | null>(null)
   const [form, setForm] = useState<FormState>(empty)
+  const [detailVehiculo, setDetailVehiculo] = useState<Vehiculo | null>(null)
 
   function openCreate() { setForm(empty); setEditing(null); setModal('create') }
   function openEdit(v: Vehiculo) {
@@ -118,11 +184,16 @@ export default function AdminVehiculos() {
         loading={isLoading}
         actions={v => (
           <div className="flex items-center justify-end gap-1">
+            <button onClick={() => setDetailVehiculo(v)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"><Eye size={15} /></button>
             <button onClick={() => openEdit(v)} className="p-1.5 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"><Pencil size={15} /></button>
             <button onClick={() => handleDelete(v)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
           </div>
         )}
       />
+
+      <Modal open={detailVehiculo !== null} onClose={() => setDetailVehiculo(null)} title={`Detalle — ${detailVehiculo?.placa_vehiculo ?? ''}`} size="lg">
+        {detailVehiculo && <VehiculoDetail v={detailVehiculo} />}
+      </Modal>
 
       <Modal open={modal !== null} onClose={() => setModal(null)} title={modal === 'create' ? 'Nuevo Vehículo' : 'Editar Vehículo'} size="xl">
         <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">

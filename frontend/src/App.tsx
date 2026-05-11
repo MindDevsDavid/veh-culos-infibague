@@ -20,6 +20,7 @@ import AdminSalidas    from './pages/admin/Salidas'
 import AdminHistorial  from './pages/admin/Historial'
 import AdminUsuarios      from './pages/admin/Usuarios'
 import AdminInspecciones  from './pages/admin/Inspecciones'
+import AdminCatalogos    from './pages/admin/Catalogos'
 
 // ── Conductor pages ───────────────────────────────────────────────────────────
 import ConductorSolicitudes from './pages/conductor/Solicitudes'
@@ -84,6 +85,7 @@ export default function App() {
             <Route path="/admin/historial"     element={<LayoutRoute roles={['ADMIN']}><AdminHistorial /></LayoutRoute>} />
             <Route path="/admin/usuarios"      element={<LayoutRoute roles={['ADMIN']}><AdminUsuarios /></LayoutRoute>} />
             <Route path="/admin/inspecciones"  element={<LayoutRoute roles={['ADMIN']}><AdminInspecciones /></LayoutRoute>} />
+            <Route path="/admin/catalogos"    element={<LayoutRoute roles={['ADMIN']}><AdminCatalogos /></LayoutRoute>} />
 
             {/* Conductor */}
             <Route path="/conductor/solicitudes"         element={<LayoutRoute roles={['ADMIN','CONDUCTOR']}><ConductorSolicitudes /></LayoutRoute>} />

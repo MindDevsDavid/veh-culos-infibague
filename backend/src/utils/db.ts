@@ -13,7 +13,11 @@ const poolConfig = {
   timezone: 'local',
 }
 
-let pool = mysql.createPool(poolConfig)
+function createPool() {
+  return mysql.createPool(poolConfig)
+}
+
+let pool = createPool()
 
 const RETRYABLE = new Set(['ECONNRESET', 'ECONNREFUSED', 'PROTOCOL_CONNECTION_LOST', 'EPIPE', 'ETIMEDOUT'])
 
@@ -25,7 +29,7 @@ async function exec(sql: string, params?: any[]): Promise<any> {
       if (RETRYABLE.has(err.code) && attempt < 2) {
         // recreate pool so all stale connections are discarded
         try { await pool.end() } catch {}
-        pool = mysql.createPool(poolConfig)
+        pool = createPool()
         await new Promise(r => setTimeout(r, 200))
         continue
       }

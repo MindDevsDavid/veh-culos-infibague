@@ -52,29 +52,37 @@ router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
 
   const hash = await bcrypt.hash(password, 10)
 
-  const condId = await transaction(async conn => {
-    const [userResult] = await conn.query(
-      'INSERT INTO usuarios (nombre, email, password_hash, rol, activo, modifica_u) VALUES (?, ?, ?, ?, 1, ?)',
-      [nombre_conductor, email, hash, 'CONDUCTOR', req.user!.email],
-    ) as any
-    const id_usuario = (userResult as any).insertId
+  let condId: number
+  try {
+    condId = await transaction(async conn => {
+      const [userResult] = await conn.query(
+        'INSERT INTO usuarios (nombre, email, password_hash, rol, activo, modifica_u) VALUES (?, ?, ?, ?, 1, ?)',
+        [nombre_conductor, email, hash, 'CONDUCTOR', req.user!.email],
+      ) as any
+      const id_usuario = (userResult as any).insertId
 
-    const [condResult] = await conn.query(
-      `INSERT INTO ctv_conductores
-       (nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia,
-        fecha_vence_licencia, autorizacion_th, fecha_autorizacion_th, fecha_vence_th,
-        telefono, id_dependencia_conductor, id_usuario, modifica_u)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia ?? null,
-        fecha_vence_licencia, autorizacion_th ?? null,
-        fecha_autorizacion_th ?? null, fecha_vence_th ?? null,
-        telefono ?? null, id_dependencia_conductor, id_usuario,
-        req.user!.email,
-      ],
-    ) as any
-    return (condResult as any).insertId
-  })
+      const [condResult] = await conn.query(
+        `INSERT INTO ctv_conductores
+         (nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia,
+          fecha_vence_licencia, autorizacion_th, fecha_autorizacion_th, fecha_vence_th,
+          telefono, id_dependencia_conductor, id_usuario, modifica_u)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia ?? null,
+          fecha_vence_licencia, autorizacion_th ?? null,
+          fecha_autorizacion_th ?? null, fecha_vence_th ?? null,
+          telefono ?? null, id_dependencia_conductor, id_usuario,
+          req.user!.email,
+        ],
+      ) as any
+      return (condResult as any).insertId
+    })
+  } catch (err: any) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: `La cédula ${cedula_conductor} ya está registrada` }); return
+    }
+    throw err
+  }
 
   const row = await queryOne(SELECT_CONDUCTOR + ' WHERE c.id = ?', [condId])
   res.status(201).json(mapConductor(row))
@@ -88,20 +96,27 @@ router.put('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
     telefono, id_dependencia_conductor,
   } = req.body
 
-  await run(
-    `UPDATE ctv_conductores SET
-     nombre_conductor=?, cedula_conductor=?, licencia_conduccion=?, categoria_licencia=?,
-     fecha_vence_licencia=?, autorizacion_th=?, fecha_autorizacion_th=?, fecha_vence_th=?,
-     telefono=?, id_dependencia_conductor=?, modifica_u=?
-     WHERE id=?`,
-    [
-      nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia ?? null,
-      fecha_vence_licencia ?? null, autorizacion_th ?? null,
-      fecha_autorizacion_th ?? null, fecha_vence_th ?? null,
-      telefono ?? null, id_dependencia_conductor,
-      req.user!.email, id,
-    ],
-  )
+  try {
+    await run(
+      `UPDATE ctv_conductores SET
+       nombre_conductor=?, cedula_conductor=?, licencia_conduccion=?, categoria_licencia=?,
+       fecha_vence_licencia=?, autorizacion_th=?, fecha_autorizacion_th=?, fecha_vence_th=?,
+       telefono=?, id_dependencia_conductor=?, modifica_u=?
+       WHERE id=?`,
+      [
+        nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia ?? null,
+        fecha_vence_licencia ?? null, autorizacion_th ?? null,
+        fecha_autorizacion_th ?? null, fecha_vence_th ?? null,
+        telefono ?? null, id_dependencia_conductor,
+        req.user!.email, id,
+      ],
+    )
+  } catch (err: any) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: `La cédula ${cedula_conductor} ya está en uso por otro conductor` }); return
+    }
+    throw err
+  }
   const row = await queryOne(SELECT_CONDUCTOR + ' WHERE c.id = ?', [id])
   res.json(mapConductor(row))
 })

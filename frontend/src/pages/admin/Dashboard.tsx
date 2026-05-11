@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { Truck, AlertTriangle, ArrowRightLeft } from 'lucide-react'
 import api from '../../api/client'
 import type { Vehiculo, SalidaVehiculo, ControlRequisito } from '../../types'
@@ -53,7 +54,7 @@ export default function AdminDashboard() {
           </div>
           <p className="text-sm text-amber-800 font-medium">
             <strong>{proximos} requisito(s)</strong> vencen en los próximos 30 días.
-            <a href="/admin/requisitos" className="text-amber-700 underline ml-1 hover:text-amber-800">Ver requisitos</a>
+            <Link to="/admin/requisitos" className="text-amber-700 underline ml-1 hover:text-amber-800">Ver requisitos</Link>
           </p>
         </div>
       )}
@@ -65,7 +66,7 @@ export default function AdminDashboard() {
           </div>
           <p className="text-sm text-red-800 font-medium">
             <strong>{vencidos} requisito(s)</strong> vencidos bloquean salidas.
-            <a href="/admin/requisitos" className="text-red-700 underline ml-1 hover:text-red-800">Ver requisitos</a>
+            <Link to="/admin/requisitos" className="text-red-700 underline ml-1 hover:text-red-800">Ver requisitos</Link>
           </p>
         </div>
       )}

@@ -69,28 +69,38 @@ router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
   if (!placa_vehiculo || !id_tipo_vehiculo || !id_marca) {
     res.status(400).json({ error: 'Faltan campos requeridos: placa_vehiculo, id_tipo_vehiculo, id_marca' }); return
   }
+  if (placa_vehiculo.length > 7) {
+    res.status(400).json({ error: 'placa_vehiculo no puede superar 7 caracteres' }); return
+  }
 
-  const r = await run(
-    `INSERT INTO ctv_vehiculos
-     (id_tipo_vehiculo, placa_vehiculo, id_marca, linea, anno, id_color,
-      numero_chasis, numero_motor, tipo_combustible, capacidad_combustible,
-      capacidad_peso, capacidad_pasajeros, id_dependencia_asignada, id_responsable,
-      estado, fecha_adquisicion, valor_adquisicion, id_chip_asignado,
-      fecha_asignacion_chip, placa_almacen, modifica_u)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id_tipo_vehiculo, placa_vehiculo.toUpperCase(), id_marca, linea ?? null, anno ?? null, id_color ?? null,
-      numero_chasis ?? null, numero_motor ?? null, tipo_combustible ?? null,
-      capacidad_combustible ?? null, capacidad_peso ?? null, capacidad_pasajeros ?? null,
-      id_dependencia_asignada, id_responsable ?? null,
-      estado ?? 'ACTIVO', fecha_adquisicion, valor_adquisicion ?? null,
-      id_chip_asignado ?? null, fecha_asignacion_chip ?? null, placa_almacen ?? null,
-      req.user!.email,
-    ],
-  )
-  const row = await queryOne(SELECT_VEHICULO + ' WHERE v.id = ?', [r.insertId])
-  const [mapped] = await attachRequisitos([row])
-  res.status(201).json(mapped)
+  try {
+    const r = await run(
+      `INSERT INTO ctv_vehiculos
+       (id_tipo_vehiculo, placa_vehiculo, id_marca, linea, anno, id_color,
+        numero_chasis, numero_motor, tipo_combustible, capacidad_combustible,
+        capacidad_peso, capacidad_pasajeros, id_dependencia_asignada, id_responsable,
+        estado, fecha_adquisicion, valor_adquisicion, id_chip_asignado,
+        fecha_asignacion_chip, placa_almacen, modifica_u)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id_tipo_vehiculo, placa_vehiculo.toUpperCase(), id_marca, linea ?? null, anno ?? null, id_color ?? null,
+        numero_chasis ?? null, numero_motor ?? null, tipo_combustible ?? null,
+        capacidad_combustible ?? null, capacidad_peso ?? null, capacidad_pasajeros ?? null,
+        id_dependencia_asignada, id_responsable ?? null,
+        estado ?? 'ACTIVO', fecha_adquisicion, valor_adquisicion ?? null,
+        id_chip_asignado ?? null, fecha_asignacion_chip ?? null, placa_almacen ?? null,
+        req.user!.email,
+      ],
+    )
+    const row = await queryOne(SELECT_VEHICULO + ' WHERE v.id = ?', [r.insertId])
+    const [mapped] = await attachRequisitos([row])
+    res.status(201).json(mapped)
+  } catch (err: any) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: `La placa ${placa_vehiculo.toUpperCase()} ya está registrada` }); return
+    }
+    throw err
+  }
 })
 
 router.put('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
@@ -103,24 +113,31 @@ router.put('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
     fecha_asignacion_chip, placa_almacen,
   } = req.body
 
-  await run(
-    `UPDATE ctv_vehiculos SET
-     id_tipo_vehiculo=?, placa_vehiculo=?, id_marca=?, linea=?, anno=?, id_color=?,
-     numero_chasis=?, numero_motor=?, tipo_combustible=?, capacidad_combustible=?,
-     capacidad_peso=?, capacidad_pasajeros=?, id_dependencia_asignada=?, id_responsable=?,
-     estado=?, fecha_adquisicion=?, valor_adquisicion=?, id_chip_asignado=?,
-     fecha_asignacion_chip=?, placa_almacen=?, modifica_u=?
-     WHERE id=?`,
-    [
-      id_tipo_vehiculo, placa_vehiculo?.toUpperCase() ?? null, id_marca, linea ?? null, anno ?? null, id_color ?? null,
-      numero_chasis ?? null, numero_motor ?? null, tipo_combustible ?? null,
-      capacidad_combustible ?? null, capacidad_peso ?? null, capacidad_pasajeros ?? null,
-      id_dependencia_asignada, id_responsable ?? null,
-      estado ?? null, fecha_adquisicion ?? null, valor_adquisicion ?? null,
-      id_chip_asignado ?? null, fecha_asignacion_chip ?? null, placa_almacen ?? null,
-      req.user!.email, id,
-    ],
-  )
+  try {
+    await run(
+      `UPDATE ctv_vehiculos SET
+       id_tipo_vehiculo=?, placa_vehiculo=?, id_marca=?, linea=?, anno=?, id_color=?,
+       numero_chasis=?, numero_motor=?, tipo_combustible=?, capacidad_combustible=?,
+       capacidad_peso=?, capacidad_pasajeros=?, id_dependencia_asignada=?, id_responsable=?,
+       estado=?, fecha_adquisicion=?, valor_adquisicion=?, id_chip_asignado=?,
+       fecha_asignacion_chip=?, placa_almacen=?, modifica_u=?
+       WHERE id=?`,
+      [
+        id_tipo_vehiculo, placa_vehiculo?.toUpperCase() ?? null, id_marca, linea ?? null, anno ?? null, id_color ?? null,
+        numero_chasis ?? null, numero_motor ?? null, tipo_combustible ?? null,
+        capacidad_combustible ?? null, capacidad_peso ?? null, capacidad_pasajeros ?? null,
+        id_dependencia_asignada, id_responsable ?? null,
+        estado ?? null, fecha_adquisicion ?? null, valor_adquisicion ?? null,
+        id_chip_asignado ?? null, fecha_asignacion_chip ?? null, placa_almacen ?? null,
+        req.user!.email, id,
+      ],
+    )
+  } catch (err: any) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: `La placa ${placa_vehiculo?.toUpperCase()} ya está registrada en otro vehículo` }); return
+    }
+    throw err
+  }
   const row = await queryOne(SELECT_VEHICULO + ' WHERE v.id = ?', [id])
   const [mapped] = await attachRequisitos([row])
   res.json(mapped)

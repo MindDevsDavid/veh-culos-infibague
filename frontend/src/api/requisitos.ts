@@ -7,5 +7,5 @@ export const requisitosApi = {
   create: (form: FormData)      => api.post<ControlRequisito>('/requisitos', form, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data),
   update: (id: number, data: unknown) => api.put<ControlRequisito>(`/requisitos/${id}`, data).then(r => r.data),
   remove: (id: number)          => api.delete(`/requisitos/${id}`).then(r => r.data),
-  archivoUrl: (id: number)      => `/api/requisitos/${id}/archivo`,
+  archivoUrl: (id: number)      => `/requisitos/${id}/archivo`,
 }
