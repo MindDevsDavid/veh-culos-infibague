@@ -19,9 +19,10 @@ export interface Mantenimiento {
 }
 
 export const mantenimientoApi = {
-  list:   (params?: Record<string, string>) => api.get<Mantenimiento[]>('/mantenimiento', { params }).then(r => r.data),
-  get:    (id: number)                      => api.get<Mantenimiento>(`/mantenimiento/${id}`).then(r => r.data),
-  create: (data: unknown)                   => api.post<Mantenimiento>('/mantenimiento', data).then(r => r.data),
-  update: (id: number, data: unknown)       => api.put<Mantenimiento>(`/mantenimiento/${id}`, data).then(r => r.data),
-  remove: (id: number)                      => api.delete(`/mantenimiento/${id}`).then(r => r.data),
+  list:       (params?: Record<string, string>) => api.get<Mantenimiento[]>('/mantenimiento', { params }).then(r => r.data),
+  get:        (id: number)                      => api.get<Mantenimiento>(`/mantenimiento/${id}`).then(r => r.data),
+  create:     (data: FormData)                  => api.post<Mantenimiento>('/mantenimiento', data).then(r => r.data),
+  update:     (id: number, data: FormData)      => api.put<Mantenimiento>(`/mantenimiento/${id}`, data).then(r => r.data),
+  remove:     (id: number)                      => api.delete(`/mantenimiento/${id}`).then(r => r.data),
+  archivoUrl: (id: number)                      => `/mantenimiento/${id}/archivo`,
 }

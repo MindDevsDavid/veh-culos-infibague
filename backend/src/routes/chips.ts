@@ -36,12 +36,19 @@ router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
   if (numero_chip.length > 15) { res.status(400).json({ error: 'numero_chip no puede superar 15 caracteres' }); return }
   const vehiculoId = id_vehiculo ? Number(id_vehiculo) : null
   const estado_chip = vehiculoId ? 'INSTALADO' : 'NO_INSTALADO'
-  const r = await run(
-    'INSERT INTO ctv_chips (numero_chip, id_vehiculo, estado_chip, estado, modifica_u) VALUES (?, ?, ?, ?, ?)',
-    [numero_chip, vehiculoId, estado_chip, estado ?? 'VIGENTE', req.user!.email],
-  )
-  const row = await queryOne(SELECT_CHIP + ' WHERE c.id = ?', [r.insertId])
-  res.status(201).json(mapChip(row))
+  try {
+    const r = await run(
+      'INSERT INTO ctv_chips (numero_chip, id_vehiculo, estado_chip, estado, modifica_u) VALUES (?, ?, ?, ?, ?)',
+      [numero_chip, vehiculoId, estado_chip, estado ?? 'VIGENTE', req.user!.email],
+    )
+    const row = await queryOne(SELECT_CHIP + ' WHERE c.id = ?', [r.insertId])
+    res.status(201).json(mapChip(row))
+  } catch (err: any) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: `El chip ${numero_chip} ya está registrado` }); return
+    }
+    throw err
+  }
 })
 
 router.put('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
@@ -49,10 +56,17 @@ router.put('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
   if (numero_chip && numero_chip.length > 15) { res.status(400).json({ error: 'numero_chip no puede superar 15 caracteres' }); return }
   const vehiculoId = id_vehiculo ? Number(id_vehiculo) : null
   const estado_chip = vehiculoId ? 'INSTALADO' : 'NO_INSTALADO'
-  await run(
-    'UPDATE ctv_chips SET numero_chip=?, id_vehiculo=?, estado_chip=?, estado=?, modifica_u=? WHERE id=?',
-    [numero_chip, vehiculoId, estado_chip, estado ?? 'VIGENTE', req.user!.email, req.params.id],
-  )
+  try {
+    await run(
+      'UPDATE ctv_chips SET numero_chip=?, id_vehiculo=?, estado_chip=?, estado=?, modifica_u=? WHERE id=?',
+      [numero_chip, vehiculoId, estado_chip, estado ?? 'VIGENTE', req.user!.email, req.params.id],
+    )
+  } catch (err: any) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: `El chip ${numero_chip} ya está en uso por otro registro` }); return
+    }
+    throw err
+  }
   const row = await queryOne(SELECT_CHIP + ' WHERE c.id = ?', [req.params.id])
   res.json(mapChip(row))
 })

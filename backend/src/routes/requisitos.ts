@@ -53,12 +53,20 @@ router.post('/', allowRoles('ADMIN'), uploadPdf.single('archivo'), async (req: R
   const vence = new Date(fecha_vencimiento)
   const estado_requisito = vence < hoy ? 'VENCIDO' : 'VIGENTE'
 
-  const r = await run(
-    `INSERT INTO ctv_control_requisitos
-     (id_vehiculo, id_tipo_requisito, numero_requisito, empresa_expide, fecha_expedicion, fecha_vencimiento, estado_requisito, observacion, modifica_u)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [Number(id_vehiculo), Number(id_tipo_requisito), numero_requisito, empresa_expide ?? null, fecha_expedicion ?? null, vence, estado_requisito, observacion ?? null, req.user!.email],
-  )
+  let r: { insertId: number; affectedRows: number }
+  try {
+    r = await run(
+      `INSERT INTO ctv_control_requisitos
+       (id_vehiculo, id_tipo_requisito, numero_requisito, empresa_expide, fecha_expedicion, fecha_vencimiento, estado_requisito, observacion, modifica_u)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [Number(id_vehiculo), Number(id_tipo_requisito), numero_requisito, empresa_expide ?? null, fecha_expedicion ?? null, vence, estado_requisito, observacion ?? null, req.user!.email],
+    )
+  } catch (err: any) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: `Ya existe un documento de ese tipo con el número ${numero_requisito}` }); return
+    }
+    throw err
+  }
 
   if (req.file) {
     const fileBuffer = req.file.buffer
@@ -86,18 +94,25 @@ router.put('/:id', allowRoles('ADMIN'), uploadPdf.single('archivo'), async (req:
   const vence = fecha_vencimiento ? new Date(fecha_vencimiento) : null
   const estado_requisito = vence ? (vence < hoy ? 'VENCIDO' : 'VIGENTE') : null
 
-  await run(
-    `UPDATE ctv_control_requisitos SET
-     id_tipo_requisito=?, numero_requisito=?, empresa_expide=?,
-     fecha_expedicion=?, fecha_vencimiento=?, estado_requisito=?, observacion=?, modifica_u=?
-     WHERE id=?`,
-    [
-      id_tipo_requisito ? Number(id_tipo_requisito) : null,
-      numero_requisito ?? null, empresa_expide ?? null,
-      fecha_expedicion ?? null, vence, estado_requisito, observacion ?? null,
-      req.user!.email, id,
-    ],
-  )
+  try {
+    await run(
+      `UPDATE ctv_control_requisitos SET
+       id_tipo_requisito=?, numero_requisito=?, empresa_expide=?,
+       fecha_expedicion=?, fecha_vencimiento=?, estado_requisito=?, observacion=?, modifica_u=?
+       WHERE id=?`,
+      [
+        id_tipo_requisito ? Number(id_tipo_requisito) : null,
+        numero_requisito ?? null, empresa_expide ?? null,
+        fecha_expedicion ?? null, vence, estado_requisito, observacion ?? null,
+        req.user!.email, id,
+      ],
+    )
+  } catch (err: any) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      res.status(400).json({ error: `Ya existe un documento de ese tipo con el número ${numero_requisito}` }); return
+    }
+    throw err
+  }
 
   if (req.file) {
     const fileBuffer = req.file.buffer

@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express'
-import { query, queryOne, run } from '../utils/db'
+import { query, queryOne, run, transaction } from '../utils/db'
 import { authenticate } from '../middleware/auth'
 import { allowRoles } from '../middleware/roles'
+import { uploadPdf } from '../middleware/upload'
 
 const router = Router()
 router.use(authenticate)
@@ -33,7 +34,7 @@ router.get('/:id', allowRoles('ADMIN', 'AUTORIZADOR'), async (req: Request, res:
   res.json(mapMant(row))
 })
 
-router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
+router.post('/', allowRoles('ADMIN'), uploadPdf.single('archivo'), async (req: Request, res: Response) => {
   const { id_vehiculo, tipo_mantenimiento, descripcion, fecha_ingreso, kilometraje_ingreso, horas_ingreso, proveedor_taller, observacion_ingreso } = req.body
   if (!id_vehiculo || !tipo_mantenimiento || !fecha_ingreso) {
     res.status(400).json({ error: 'Faltan campos requeridos' }); return
@@ -47,11 +48,33 @@ router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id_vehiculo, tipo_mantenimiento, descripcion, fecha_ingreso, kilometraje_ingreso ?? null, horas_ingreso ?? null, proveedor_taller, observacion_ingreso ?? null, req.user!.email],
   )
+
+  if (req.file) {
+    await transaction(async conn => {
+      await conn.query('SET SESSION max_allowed_packet = 67108864')
+      await conn.query(
+        'INSERT INTO ctv_pdfs (nombre_tabla, id_tabla, nombre_archivo, contenido, modifica_u) VALUES (?, ?, ?, ?, ?)',
+        ['ctv_mantenimientos', r.insertId, req.file!.originalname, req.file!.buffer, req.user!.email],
+      )
+    })
+  }
+
   const row = await queryOne(SELECT_MANT + ' WHERE m.id = ?', [r.insertId])
   res.status(201).json(mapMant(row))
 })
 
-router.put('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
+router.get('/:id/archivo', allowRoles('ADMIN', 'AUTORIZADOR'), async (req: Request, res: Response) => {
+  const pdf = await queryOne<any>(
+    "SELECT nombre_archivo, contenido FROM ctv_pdfs WHERE nombre_tabla='ctv_mantenimientos' AND id_tabla=?",
+    [req.params.id],
+  )
+  if (!pdf) { res.status(404).json({ error: 'No hay archivo adjunto' }); return }
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', `inline; filename="${pdf.nombre_archivo}"`)
+  res.send(pdf.contenido)
+})
+
+router.put('/:id', allowRoles('ADMIN'), uploadPdf.single('archivo'), async (req: Request, res: Response) => {
   const id = Number(req.params.id)
   const {
     tipo_mantenimiento, descripcion, fecha_ingreso, kilometraje_ingreso, horas_ingreso,
@@ -74,6 +97,22 @@ router.put('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
       req.user!.email, id,
     ],
   )
+
+  if (req.file) {
+    const old = await queryOne<any>("SELECT id FROM ctv_pdfs WHERE nombre_tabla='ctv_mantenimientos' AND id_tabla=?", [id])
+    await transaction(async conn => {
+      await conn.query('SET SESSION max_allowed_packet = 67108864')
+      if (old) {
+        await conn.query('UPDATE ctv_pdfs SET nombre_archivo=?, contenido=?, modifica_u=? WHERE id=?',
+          [req.file!.originalname, req.file!.buffer, req.user!.email, old.id])
+      } else {
+        await conn.query(
+          'INSERT INTO ctv_pdfs (nombre_tabla, id_tabla, nombre_archivo, contenido, modifica_u) VALUES (?, ?, ?, ?, ?)',
+          ['ctv_mantenimientos', id, req.file!.originalname, req.file!.buffer, req.user!.email],
+        )
+      }
+    })
+  }
 
   if (fecha_salida) {
     const row_m = await queryOne<any>('SELECT id_vehiculo FROM ctv_mantenimientos WHERE id = ?', [id])

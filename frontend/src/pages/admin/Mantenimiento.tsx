@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, CheckCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, CheckCircle, ExternalLink } from 'lucide-react'
+import api from '../../api/client'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import DataTable from '../../components/DataTable'
@@ -30,8 +31,9 @@ export default function AdminMantenimiento() {
   const [modal, setModal] = useState<'create' | 'edit' | null>(null)
   const [editing, setEditing] = useState<Mantenimiento | null>(null)
   const [form, setForm] = useState<FormState>(empty)
+  const [archivo, setArchivo] = useState<File | null>(null)
 
-  function openCreate() { setForm(empty); setEditing(null); setModal('create') }
+  function openCreate() { setForm(empty); setEditing(null); setArchivo(null); setModal('create') }
   function openEdit(m: Mantenimiento) {
     setEditing(m)
     setForm({
@@ -43,6 +45,7 @@ export default function AdminMantenimiento() {
       observacion_salida: m.observacion_salida ?? '', fecha_factura: m.fecha_factura?.slice(0,10) ?? '',
       numero_factura: m.numero_factura ?? '', valor_factura: String(m.valor_factura ?? ''),
     })
+    setArchivo(null)
     setModal('edit')
   }
 
@@ -53,16 +56,12 @@ export default function AdminMantenimiento() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const payload = {
-      ...form,
-      id_vehiculo: Number(form.id_vehiculo),
-      kilometraje_ingreso: form.kilometraje_ingreso ? Number(form.kilometraje_ingreso) : undefined,
-      kilometraje_salida: form.kilometraje_salida ? Number(form.kilometraje_salida) : undefined,
-      valor_factura: form.valor_factura ? Number(form.valor_factura) : undefined,
-    }
+    const fd = new FormData()
+    Object.entries(form).forEach(([k, v]) => { if (v !== '') fd.append(k, String(v)) })
+    if (archivo) fd.append('archivo', archivo)
     try {
-      if (modal === 'create') await create.mutateAsync(payload)
-      else await upd.mutateAsync({ id: editing!.id, data: payload })
+      if (modal === 'create') await create.mutateAsync(fd)
+      else await upd.mutateAsync({ id: editing!.id, data: fd })
       setModal(null)
     } catch { /* toast */ }
   }
@@ -101,6 +100,18 @@ export default function AdminMantenimiento() {
         searchFilter={(m, q) => [m.vehiculo?.placa_vehiculo ?? '', m.proveedor_taller ?? '', m.descripcion].join(' ').toLowerCase().includes(q.toLowerCase())}
         actions={m => (
           <div className="flex items-center justify-end gap-1">
+            <button
+              title="Ver factura PDF"
+              className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              onClick={async () => {
+                try {
+                  const res = await api.get(mantenimientoApi.archivoUrl(m.id), { responseType: 'blob' })
+                  const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+                  const w = window.open(url, '_blank')
+                  if (w) w.addEventListener('beforeunload', () => URL.revokeObjectURL(url))
+                } catch { toast.error('No hay archivo adjunto') }
+              }}
+            ><ExternalLink size={15} /></button>
             <button onClick={() => openEdit(m)} className="p-1.5 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600"><Pencil size={15} /></button>
             <button onClick={async () => { if (confirm('¿Eliminar este registro?')) await del_.mutateAsync(m.id) }} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 size={15} /></button>
           </div>
@@ -128,6 +139,7 @@ export default function AdminMantenimiento() {
           </div>
           <hr className="border-slate-100" />
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Salida del taller (completar al terminar)</p>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Fecha salida" type="date" value={form.fecha_salida} onChange={set('fecha_salida')} />
             <FormField label="Km salida" type="number" value={form.kilometraje_salida} onChange={set('kilometraje_salida')} />
@@ -135,6 +147,12 @@ export default function AdminMantenimiento() {
             <FormField label="No. factura" value={form.numero_factura} onChange={set('numero_factura')} />
             <FormField label="Fecha factura" type="date" value={form.fecha_factura} onChange={set('fecha_factura')} />
             <FormField label="Valor factura ($)" type="number" value={form.valor_factura} onChange={set('valor_factura')} />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-700 block mb-1">Factura PDF</label>
+            <input type="file" accept="application/pdf" onChange={e => setArchivo(e.target.files?.[0] ?? null)}
+              className="text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+            {modal === 'edit' && <p className="text-xs text-slate-400 mt-1">Deja vacío para mantener el archivo existente.</p>}
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">Cancelar</button>
