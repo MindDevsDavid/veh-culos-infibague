@@ -47,7 +47,7 @@ function InspeccionCard({ insp }: { insp: Inspeccion }) {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
         <Campo label="Kilometraje" value={insp.kilometraje?.toLocaleString() + ' km'} />
         <Campo label="Conductor" value={insp.conductor?.nombre_conductor} />
-        <Campo label="Hora" value={insp.hora ? String(insp.hora).slice(0, 5) : undefined} />
+        <Campo label="Hora" value={insp.hora ? String(insp.hora).includes('T') ? String(insp.hora).slice(11, 16) : String(insp.hora).slice(0, 5) : undefined} />
         {insp.observaciones && <div className="col-span-2 sm:col-span-3"><Campo label="Observaciones" value={insp.observaciones} /></div>}
       </div>
     </div>

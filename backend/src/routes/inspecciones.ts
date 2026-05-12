@@ -117,6 +117,8 @@ router.post('/', allowRoles('ADMIN', 'CONDUCTOR'), uploadFotos.array('fotos', 4)
 
   const toBool = (v: any) => (v === true || v === 'true' || v === '1' || v === 1) ? 1 : 0
   const ahora = new Date()
+  const fechaHoy = ahora.toISOString().slice(0, 10)
+  const horaAhora = ahora.toTimeString().slice(0, 8)
 
   const r = await run(
     `INSERT INTO ctv_inspecciones
@@ -139,7 +141,7 @@ router.post('/', allowRoles('ADMIN', 'CONDUCTOR'), uploadFotos.array('fotos', 4)
              ?,
              ?, ?, ?, ?)`,
     [
-      ahora, ahora, Number(id_vehiculo), placa_vehiculo ?? '', Number(id_conductor), tipo_inspeccion, Number(kilometraje),
+      fechaHoy, horaAhora, Number(id_vehiculo), placa_vehiculo ?? '', Number(id_conductor), tipo_inspeccion, Number(kilometraje),
       estado_motor ?? null, nivel_refrigerante ?? null, nivel_bateria ?? null,
       estado_llantas_delanteras ?? null, estado_llantas_traseras ?? null, presion_llantas ?? null,
       estado_eje ?? null, suspension ?? null,

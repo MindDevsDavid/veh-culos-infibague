@@ -9,6 +9,7 @@ import FormField from '../../components/FormField'
 import api from '../../api/client'
 import { useVehiculos } from '../../hooks/useVehiculos'
 import { useConductores } from '../../hooks/useConductores'
+import { useAuth } from '../../context/AuthContext'
 
 interface Tanqueo {
   id: number; id_vehiculo: number; id_salida: number; placa_vehiculo: string
@@ -19,6 +20,8 @@ interface Tanqueo {
 const empty = { id_vehiculo: '', id_salida: '', placa_vehiculo: '', fecha_tanqueo: '', tipo_combustible: 'GASOLINA', cantidad_galones: '', id_conductor_tanqueo: '' }
 
 export default function AdminTanqueos() {
+  const { user } = useAuth()
+  const isAdmin = user?.rol === 'ADMIN'
   const qc = useQueryClient()
   const { data: items = [], isLoading } = useQuery<Tanqueo[]>({ queryKey: ['tanqueos'], queryFn: () => api.get('/tanqueos').then(r => r.data) })
   const { data: vehiculos = [] } = useVehiculos()
@@ -67,17 +70,19 @@ export default function AdminTanqueos() {
           <h1 className="text-xl font-bold text-slate-800">Tanqueos</h1>
           <p className="text-sm text-slate-500">{items.length} registros</p>
         </div>
-        <button onClick={() => setModal(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
-          <Plus size={16} /> Registrar tanqueo
-        </button>
+        {isAdmin && (
+          <button onClick={() => setModal(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+            <Plus size={16} /> Registrar tanqueo
+          </button>
+        )}
       </div>
 
       <DataTable columns={columns} data={items} keyField="id" loading={isLoading}
         searchable searchPlaceholder="Buscar placa, conductor..."
         searchFilter={(t, q) => [t.vehiculo?.placa_vehiculo ?? t.placa_vehiculo, t.conductor?.nombre_conductor ?? ''].join(' ').toLowerCase().includes(q.toLowerCase())}
-        actions={t => (
+        actions={isAdmin ? t => (
           <button onClick={async () => { if (confirm('¿Eliminar este tanqueo?')) await del_.mutateAsync(t.id) }} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 size={15} /></button>
-        )}
+        ) : undefined}
       />
 
       <Modal open={modal} onClose={() => setModal(false)} title="Registrar Tanqueo" size="lg">

@@ -12,6 +12,7 @@ import { requisitosApi } from '../../api/requisitos'
 import type { ControlRequisito } from '../../types'
 import { useVehiculos } from '../../hooks/useVehiculos'
 import { useTiposRequisito } from '../../hooks/useCatalogos'
+import { useAuth } from '../../context/AuthContext'
 
 const empty = {
   id_vehiculo: '', id_tipo_requisito: '', numero_requisito: '', empresa_expide: '',
@@ -19,6 +20,8 @@ const empty = {
 }
 
 export default function AdminRequisitos() {
+  const { user } = useAuth()
+  const isAdmin = user?.rol === 'ADMIN'
   const qc = useQueryClient()
   const { data: items = [], isLoading } = useQuery({ queryKey: ['requisitos'], queryFn: () => requisitosApi.list() })
   const { data: vehiculos = [] } = useVehiculos()
@@ -97,14 +100,16 @@ export default function AdminRequisitos() {
           <h1 className="text-xl font-bold text-slate-800">Requisitos / Documentos</h1>
           <p className="text-sm text-slate-500">{items.length} documentos registrados</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => { setNuevoTipo(''); setModalTipo(true) }} className="flex items-center gap-2 bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
-            <Plus size={16} /> Nuevo tipo de documento
-          </button>
-          <button onClick={() => setModal(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
-            <Plus size={16} /> Nuevo documento
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            <button onClick={() => { setNuevoTipo(''); setModalTipo(true) }} className="flex items-center gap-2 bg-slate-600 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+              <Plus size={16} /> Nuevo tipo de documento
+            </button>
+            <button onClick={() => setModal(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+              <Plus size={16} /> Nuevo documento
+            </button>
+          </div>
+        )}
       </div>
 
       {vencidos > 0 && (
@@ -139,8 +144,10 @@ export default function AdminRequisitos() {
             >
               <ExternalLink size={15} />
             </button>
-            <button onClick={async () => { if (confirm('¿Eliminar este documento?')) await del_.mutateAsync(r.id) }}
-              className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 size={15} /></button>
+            {isAdmin && (
+              <button onClick={async () => { if (confirm('¿Eliminar este documento?')) await del_.mutateAsync(r.id) }}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 size={15} /></button>
+            )}
           </div>
         )}
       />

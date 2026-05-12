@@ -1,6 +1,8 @@
 import { useState, useEffect, ReactNode } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
+import api from '../api/client'
 import {
   LayoutDashboard, Truck, Users, Wrench, FileText, Cpu, Package,
   Fuel, ArrowRightLeft, History, UserCog, ClipboardList, CheckSquare,
@@ -43,6 +45,7 @@ const NAV: Record<string, NavItem[]> = {
     { to: '/autorizador/conductores', label: 'Conductores',  icon: <Users size={18} /> },
     { to: '/autorizador/historial',     label: 'Historial',      icon: <History size={18} /> },
     { to: '/autorizador/inspecciones',  label: 'Inspecciones',   icon: <CheckSquare size={18} /> },
+    { to: '/admin/requisitos',          label: 'Requisitos',     icon: <FileText size={18} /> },
   ],
   VIGILANTE: [
     { to: '/vigilante/activos', label: 'Vehículos Activos', icon: <CheckSquare size={18} /> },
@@ -50,6 +53,7 @@ const NAV: Record<string, NavItem[]> = {
   CONSULTAS: [
     { to: '/consultas/activos',   label: 'Viajes en Curso', icon: <ArrowRightLeft size={18} /> },
     { to: '/consultas/historial', label: 'Historial',       icon: <History size={18} /> },
+    { to: '/admin/tanqueos',      label: 'Tanqueos',        icon: <Fuel size={18} /> },
   ],
   ALMACENISTA: [
     { to: '/almacenista/tanqueos', label: 'Tanqueos', icon: <Fuel size={18} /> },
@@ -85,7 +89,20 @@ export default function Layout({ children }: { children: ReactNode }) {
   useEffect(() => { setMobileOpen(false) }, [location.pathname])
 
   const showLabels = mobileOpen || !collapsed
-  const items = NAV[user?.rol ?? ''] ?? []
+  const rawItems = NAV[user?.rol ?? ''] ?? []
+
+  const { data: preop } = useQuery<any | null>({
+    queryKey: ['inspecciones', 'preop-pendiente'],
+    queryFn: () => api.get('/inspecciones/preop-pendiente').then(r => r.data),
+    enabled: user?.rol === 'CONDUCTOR',
+    staleTime: 30_000,
+  })
+
+  const items = rawItems.map(item =>
+    item.to === '/conductor/solicitar' && preop?.id
+      ? { ...item, to: `/conductor/solicitar?inspeccion=${preop.id}` }
+      : item
+  )
 
   function toggleSidebar() {
     if (window.matchMedia('(min-width: 768px)').matches) {

@@ -77,10 +77,10 @@ export default function App() {
             <Route path="/admin/vehiculos"     element={<LayoutRoute roles={['ADMIN']}><AdminVehiculos /></LayoutRoute>} />
             <Route path="/admin/conductores"   element={<LayoutRoute roles={['ADMIN']}><AdminConductores /></LayoutRoute>} />
             <Route path="/admin/mantenimiento" element={<LayoutRoute roles={['ADMIN']}><AdminMantenimiento /></LayoutRoute>} />
-            <Route path="/admin/requisitos"    element={<LayoutRoute roles={['ADMIN']}><AdminRequisitos /></LayoutRoute>} />
+            <Route path="/admin/requisitos"    element={<LayoutRoute roles={['ADMIN', 'AUTORIZADOR']}><AdminRequisitos /></LayoutRoute>} />
             <Route path="/admin/chips"         element={<LayoutRoute roles={['ADMIN']}><AdminChips /></LayoutRoute>} />
             <Route path="/admin/componentes"   element={<LayoutRoute roles={['ADMIN']}><AdminComponentes /></LayoutRoute>} />
-            <Route path="/admin/tanqueos"      element={<LayoutRoute roles={['ADMIN']}><AdminTanqueos /></LayoutRoute>} />
+            <Route path="/admin/tanqueos"      element={<LayoutRoute roles={['ADMIN', 'CONSULTAS']}><AdminTanqueos /></LayoutRoute>} />
             <Route path="/admin/salidas"       element={<LayoutRoute roles={['ADMIN']}><AdminSalidas /></LayoutRoute>} />
             <Route path="/admin/historial"     element={<LayoutRoute roles={['ADMIN']}><AdminHistorial /></LayoutRoute>} />
             <Route path="/admin/usuarios"      element={<LayoutRoute roles={['ADMIN']}><AdminUsuarios /></LayoutRoute>} />
