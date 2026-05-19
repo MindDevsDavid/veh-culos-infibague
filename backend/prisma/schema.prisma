@@ -170,6 +170,10 @@ model Conductor {
   licencia_conduccion   String    @db.VarChar(20)
   categoria_licencia    String    @db.VarChar(5)
   fecha_vence_licencia  DateTime
+  categoria_licencia_2  String?   @db.VarChar(5)
+  fecha_vence_licencia_2 DateTime?
+  categoria_licencia_3  String?   @db.VarChar(5)
+  fecha_vence_licencia_3 DateTime?
   autorizacion_th       Int       @default(0)
   fecha_autorizacion_th DateTime?
   fecha_vence_th        DateTime?

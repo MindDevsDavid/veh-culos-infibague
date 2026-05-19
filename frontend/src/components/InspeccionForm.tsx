@@ -56,7 +56,10 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [form, setForm] = useState(emptyForm)
-  const [fotos, setFotos] = useState<File[]>([])
+  const [fotoFrente, setFotoFrente] = useState<File | null>(null)
+  const [fotoAtras, setFotoAtras] = useState<File | null>(null)
+  const [fotoLadoIzq, setFotoLadoIzq] = useState<File | null>(null)
+  const [fotoLadoDer, setFotoLadoDer] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [savedId, setSavedId] = useState<number | null>(null)
   const { data: vehiculos = [] } = useVehiculos()
@@ -108,7 +111,12 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
     Object.entries(form).forEach(([k, v]) => fd.append(k, v))
     fd.set('tipo_inspeccion', tipo)
     if (salidaId) fd.append('id_salida', String(salidaId))
-    fotos.forEach(f => fd.append('fotos', f))
+    
+    if (fotoFrente) fd.append('fotos', fotoFrente)
+    if (fotoAtras) fd.append('fotos', fotoAtras)
+    if (fotoLadoIzq) fd.append('fotos', fotoLadoIzq)
+    if (fotoLadoDer) fd.append('fotos', fotoLadoDer)
+
     try {
       const saved = await inspeccionesApi.create(fd)
       setSavedId(saved.id)
@@ -320,22 +328,47 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
           )}
         </Section>
 
-        {/* Fotos */}
-        <Section title="Fotos (máx. 4)">
-          <input type="file" accept="image/*" multiple onChange={e => setFotos(Array.from(e.target.files ?? []).slice(0, 4))}
-            className="text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
-          {fotos.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {fotos.map((f, i) => <span key={i} className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">{f.name}</span>)}
-            </div>
-          )}
-        </Section>
-
-        {/* Observaciones */}
-        <Section title="Observaciones">
+        {/* Observaciones y Evidencia */}
+        <Section title="Observaciones y Evidencia Fotográfica">
           <textarea value={form.observaciones} onChange={setInput('observaciones')} rows={3}
-            placeholder="Observaciones adicionales..."
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            placeholder="Anota cualquier novedad técnica, daños, o información importante..."
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4" />
+          
+          {(() => {
+            const soloCamera = user?.rol === 'CONDUCTOR' || user?.rol === 'VIGILANTE'
+            const captureAttr = soloCamera ? { capture: 'environment' as const } : {}
+            const inputCls = "text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-2.5 file:rounded-md file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 w-full"
+            return (
+              <div className="border-t border-slate-100 pt-3">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-xs font-medium text-slate-600">Agregar fotos a la observación (Opcionales)</label>
+                  {soloCamera && (
+                    <span className="inline-flex items-center gap-1 text-[10px] bg-blue-50 text-blue-600 border border-blue-200 font-semibold px-2 py-0.5 rounded-full">
+                      📷 Solo cámara
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <span className="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Foto de frente</span>
+                    <input type="file" accept="image/*" {...captureAttr} onChange={e => setFotoFrente(e.target.files?.[0] ?? null)} className={inputCls} />
+                  </div>
+                  <div>
+                    <span className="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Foto de atrás</span>
+                    <input type="file" accept="image/*" {...captureAttr} onChange={e => setFotoAtras(e.target.files?.[0] ?? null)} className={inputCls} />
+                  </div>
+                  <div>
+                    <span className="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Foto de lado (Izquierdo)</span>
+                    <input type="file" accept="image/*" {...captureAttr} onChange={e => setFotoLadoIzq(e.target.files?.[0] ?? null)} className={inputCls} />
+                  </div>
+                  <div>
+                    <span className="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Foto de lado (Derecho)</span>
+                    <input type="file" accept="image/*" {...captureAttr} onChange={e => setFotoLadoDer(e.target.files?.[0] ?? null)} className={inputCls} />
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
         </Section>
 
         <div className="flex justify-end gap-3 pb-6">

@@ -39,7 +39,7 @@ router.get('/:id', allowRoles('ADMIN', 'AUTORIZADOR', 'CONDUCTOR'), async (req: 
 router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
   const {
     nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia,
-    fecha_vence_licencia, autorizacion_th, fecha_autorizacion_th, fecha_vence_th,
+    fecha_vence_licencia, categoria_licencia_2, fecha_vence_licencia_2, categoria_licencia_3, fecha_vence_licencia_3, autorizacion_th, fecha_autorizacion_th, fecha_vence_th,
     telefono, id_dependencia_conductor, email, password,
   } = req.body
 
@@ -64,12 +64,13 @@ router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
       const [condResult] = await conn.query(
         `INSERT INTO ctv_conductores
          (nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia,
-          fecha_vence_licencia, autorizacion_th, fecha_autorizacion_th, fecha_vence_th,
+          fecha_vence_licencia, categoria_licencia_2, fecha_vence_licencia_2, categoria_licencia_3, fecha_vence_licencia_3, autorizacion_th, fecha_autorizacion_th, fecha_vence_th,
           telefono, id_dependencia_conductor, id_usuario, modifica_u)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia ?? null,
-          fecha_vence_licencia, autorizacion_th ?? null,
+          fecha_vence_licencia, categoria_licencia_2 ?? null, fecha_vence_licencia_2 ?? null,
+          categoria_licencia_3 ?? null, fecha_vence_licencia_3 ?? null, autorizacion_th ?? null,
           fecha_autorizacion_th ?? null, fecha_vence_th ?? null,
           telefono ?? null, id_dependencia_conductor, id_usuario,
           req.user!.email,
@@ -92,7 +93,7 @@ router.put('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
   const id = Number(req.params.id)
   const {
     nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia,
-    fecha_vence_licencia, autorizacion_th, fecha_autorizacion_th, fecha_vence_th,
+    fecha_vence_licencia, categoria_licencia_2, fecha_vence_licencia_2, categoria_licencia_3, fecha_vence_licencia_3, autorizacion_th, fecha_autorizacion_th, fecha_vence_th,
     telefono, id_dependencia_conductor,
   } = req.body
 
@@ -100,12 +101,13 @@ router.put('/:id', allowRoles('ADMIN'), async (req: Request, res: Response) => {
     await run(
       `UPDATE ctv_conductores SET
        nombre_conductor=?, cedula_conductor=?, licencia_conduccion=?, categoria_licencia=?,
-       fecha_vence_licencia=?, autorizacion_th=?, fecha_autorizacion_th=?, fecha_vence_th=?,
+       fecha_vence_licencia=?, categoria_licencia_2=?, fecha_vence_licencia_2=?, categoria_licencia_3=?, fecha_vence_licencia_3=?, autorizacion_th=?, fecha_autorizacion_th=?, fecha_vence_th=?,
        telefono=?, id_dependencia_conductor=?, modifica_u=?
        WHERE id=?`,
       [
         nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia ?? null,
-        fecha_vence_licencia ?? null, autorizacion_th ?? null,
+        fecha_vence_licencia ?? null, categoria_licencia_2 ?? null, fecha_vence_licencia_2 ?? null,
+        categoria_licencia_3 ?? null, fecha_vence_licencia_3 ?? null, autorizacion_th ?? null,
         fecha_autorizacion_th ?? null, fecha_vence_th ?? null,
         telefono ?? null, id_dependencia_conductor,
         req.user!.email, id,

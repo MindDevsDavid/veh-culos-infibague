@@ -15,7 +15,7 @@ export interface Mantenimiento {
   fecha_factura?: string
   numero_factura?: string
   valor_factura?: number
-  vehiculo?: { placa_vehiculo: string }
+  vehiculo?: { placa_vehiculo: string; linea?: string }
 }
 
 export const mantenimientoApi = {

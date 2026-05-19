@@ -11,7 +11,9 @@ import type { Conductor } from '../../types'
 
 const empty = {
   nombre_conductor: '', cedula_conductor: '', licencia_conduccion: '', categoria_licencia: '',
-  fecha_vence_licencia: '', autorizacion_th: '', fecha_autorizacion_th: '', fecha_vence_th: '',
+  fecha_vence_licencia: '', categoria_licencia_2: '', fecha_vence_licencia_2: '',
+  categoria_licencia_3: '', fecha_vence_licencia_3: '',
+  autorizacion_th: '', fecha_autorizacion_th: '', fecha_vence_th: '',
   telefono: '', id_dependencia_conductor: '',
   email: '', password: '', password_confirm: '',
 }
@@ -27,15 +29,21 @@ export default function AdminConductores() {
   const [modal, setModal] = useState<'create' | 'edit' | null>(null)
   const [editing, setEditing] = useState<Conductor | null>(null)
   const [form, setForm] = useState<FormState>(empty)
+  const [licenciasVisibles, setLicenciasVisibles] = useState(1)
 
-  function openCreate() { setForm(empty); setEditing(null); setModal('create') }
+  function openCreate() { setForm(empty); setEditing(null); setLicenciasVisibles(1); setModal('create') }
   function openEdit(c: Conductor) {
     setEditing(c)
+    setLicenciasVisibles(c.categoria_licencia_3 ? 3 : (c.categoria_licencia_2 ? 2 : 1))
     setForm({
       nombre_conductor: c.nombre_conductor, cedula_conductor: c.cedula_conductor,
       licencia_conduccion: c.licencia_conduccion, categoria_licencia: c.categoria_licencia,
       fecha_vence_licencia: c.fecha_vence_licencia?.slice(0,10) ?? '',
-      autorizacion_th: String(c.autorizacion_th),
+      categoria_licencia_2: c.categoria_licencia_2 ?? '',
+      fecha_vence_licencia_2: c.fecha_vence_licencia_2?.slice(0,10) ?? '',
+      categoria_licencia_3: c.categoria_licencia_3 ?? '',
+      fecha_vence_licencia_3: c.fecha_vence_licencia_3?.slice(0,10) ?? '',
+      autorizacion_th: String(c.autorizacion_th ?? ''),
       fecha_autorizacion_th: c.fecha_autorizacion_th?.slice(0,10) ?? '',
       fecha_vence_th: c.fecha_vence_th?.slice(0,10) ?? '',
       telefono: String(c.telefono ?? ''), id_dependencia_conductor: String(c.id_dependencia_conductor),
@@ -57,6 +65,10 @@ export default function AdminConductores() {
     const { password_confirm, ...rest } = form
     const payload = {
       ...rest,
+      categoria_licencia_2: licenciasVisibles >= 2 ? (form.categoria_licencia_2 || null) : null,
+      fecha_vence_licencia_2: licenciasVisibles >= 2 ? (form.fecha_vence_licencia_2 || null) : null,
+      categoria_licencia_3: licenciasVisibles >= 3 ? (form.categoria_licencia_3 || null) : null,
+      fecha_vence_licencia_3: licenciasVisibles >= 3 ? (form.fecha_vence_licencia_3 || null) : null,
       autorizacion_th: form.autorizacion_th || null,
       telefono: form.telefono ? Number(form.telefono) : undefined,
       id_dependencia_conductor: Number(form.id_dependencia_conductor),
@@ -176,8 +188,31 @@ export default function AdminConductores() {
             <FormField label="Contraseña" type="password" required value={form.password} onChange={set('password')} />
             <FormField label="Confirmar contraseña" type="password" required value={form.password_confirm} onChange={set('password_confirm')} />
           </>}
-          <FormField label="Categoría licencia" required value={form.categoria_licencia} onChange={set('categoria_licencia')} placeholder="B1, C1, C2..." />
-          <FormField label="Vence licencia" type="date" required value={form.fecha_vence_licencia} onChange={set('fecha_vence_licencia')} />
+          <FormField label="Categoría licencia *" required value={form.categoria_licencia} onChange={set('categoria_licencia')} placeholder="B1, C1, C2..." />
+          <FormField label="Vence licencia *" type="date" required value={form.fecha_vence_licencia} onChange={set('fecha_vence_licencia')} />
+          
+          {licenciasVisibles >= 2 && (
+            <>
+              <FormField label="Categoría licencia 2" value={form.categoria_licencia_2} onChange={set('categoria_licencia_2')} placeholder="B1, C1, C2..." />
+              <FormField label="Vence licencia 2" type="date" value={form.fecha_vence_licencia_2} onChange={set('fecha_vence_licencia_2')} />
+            </>
+          )}
+
+          {licenciasVisibles >= 3 && (
+            <>
+              <FormField label="Categoría licencia 3" value={form.categoria_licencia_3} onChange={set('categoria_licencia_3')} placeholder="B1, C1, C2..." />
+              <FormField label="Vence licencia 3" type="date" value={form.fecha_vence_licencia_3} onChange={set('fecha_vence_licencia_3')} />
+            </>
+          )}
+
+          {licenciasVisibles < 3 && (
+            <div className="col-span-full">
+              <button type="button" onClick={() => setLicenciasVisibles(v => v + 1)} className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
+                <Plus size={14} /> Agregar otra licencia
+              </button>
+            </div>
+          )}
+
           <FormField label="No. Autorización TH" value={form.autorizacion_th} onChange={set('autorizacion_th')} placeholder="Ej: TH-2024-001" />
           <FormField label="Fecha autorización TH" type="date" value={form.fecha_autorizacion_th} onChange={set('fecha_autorizacion_th')} />
           <FormField label="Fecha vence TH" type="date" value={form.fecha_vence_th} onChange={set('fecha_vence_th')} />
