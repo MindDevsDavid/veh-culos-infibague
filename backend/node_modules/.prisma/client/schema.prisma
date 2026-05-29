@@ -1,0 +1,447 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+
+model Usuario {
+  id            Int      @id @default(autoincrement())
+  nombre        String   @db.VarChar(80)
+  email         String   @unique @db.VarChar(100)
+  password_hash String   @db.VarChar(255)
+  rol           Rol
+  activo        Boolean  @default(true)
+  modifica_f    DateTime @default(now()) @updatedAt
+  modifica_u    String   @db.VarChar(15)
+
+  conductor         Conductor?
+  salidas_autoriza  SalidaVehiculo[] @relation("Autorizador")
+  salidas_vig_sal   SalidaVehiculo[] @relation("VigilanteSalida")
+  salidas_vig_ent   SalidaVehiculo[] @relation("VigilanteEntrada")
+  tanqueos_autoriza ControlTanqueo[] @relation("AutorizadorTanqueo")
+  fotos_subidas     FotoSalidaEntrada[]
+
+  @@map("usuarios")
+}
+
+enum Rol {
+  ADMIN
+  CONDUCTOR
+  AUTORIZADOR
+  VIGILANTE
+  CONSULTAS
+}
+
+// ─── Catálogos / Lookup tables ────────────────────────────────────────────────
+
+model TipoVehiculo {
+  id          Int       @id @default(autoincrement())
+  descripcion String    @db.VarChar(20)
+  modifica_f  DateTime  @default(now()) @updatedAt
+  modifica_u  String    @db.VarChar(15)
+  vehiculos   Vehiculo[]
+
+  @@map("ctv_tipo_vehiculos")
+}
+
+model Marca {
+  id          Int       @id @default(autoincrement())
+  descripcion String    @db.VarChar(40)
+  modifica_f  DateTime  @default(now()) @updatedAt
+  modifica_u  String    @db.VarChar(15)
+  vehiculos   Vehiculo[]
+
+  @@map("ctv_marcas")
+}
+
+model Color {
+  id          Int       @id @default(autoincrement())
+  descripcion String    @db.VarChar(30)
+  modifica_f  DateTime  @default(now()) @updatedAt
+  modifica_u  String    @db.VarChar(15)
+  vehiculos   Vehiculo[]
+
+  @@map("ctv_color")
+}
+
+model Dependencia {
+  id                  Int         @id @default(autoincrement())
+  id_dependencia_ig   Int?
+  descripcion         String      @db.VarChar(30)
+  modifica_f          DateTime    @default(now()) @updatedAt
+  modifica_u          String      @db.VarChar(15)
+  vehiculos_asignados Vehiculo[]  @relation("DependenciaVehiculo")
+  conductores         Conductor[]
+  salidas             SalidaVehiculo[]
+
+  @@map("ctv_dependencias")
+}
+
+model Componente {
+  id          Int                  @id @default(autoincrement())
+  descripcion String               @db.VarChar(30)
+  modifica_f  DateTime             @default(now()) @updatedAt
+  modifica_u  String               @db.VarChar(15)
+  controles   ControlComponente[]
+
+  @@map("ctv_componentes")
+}
+
+model TipoRequisito {
+  id          Int                  @id @default(autoincrement())
+  descripcion String               @db.VarChar(30)
+  modifica_f  DateTime             @default(now()) @updatedAt
+  modifica_u  String               @db.VarChar(15)
+  requisitos  ControlRequisito[]
+
+  @@map("ctv_tipos_requisitos")
+}
+
+// ─── Chips ────────────────────────────────────────────────────────────────────
+
+model Chip {
+  id          Int        @id @default(autoincrement())
+  numero_chip String     @db.VarChar(50)
+  estado_chip String     @db.VarChar(15)
+  estado      String     @db.VarChar(10)
+  modifica_f  DateTime   @default(now()) @updatedAt
+  modifica_u  String     @db.VarChar(15)
+  vehiculo    Vehiculo?
+
+  @@map("ctv_chips")
+}
+
+// ─── Vehículos ────────────────────────────────────────────────────────────────
+
+model Vehiculo {
+  id                    Int       @id @default(autoincrement())
+  id_tipo_vehiculo      Int
+  placa_vehiculo        String    @unique @db.VarChar(6)
+  id_marca              Int
+  linea                 String    @db.VarChar(20)
+  anno                  Int
+  id_color              Int
+  numero_chasis         String    @db.VarChar(20)
+  numero_motor          String    @db.VarChar(20)
+  tipo_combustible      String    @db.VarChar(20)
+  capacidad_combustible Int?
+  capacidad_peso        Int?
+  capacidad_pasajeros   Int?
+  id_dependencia_asignada Int
+  id_responsable        Int
+  estado                String    @db.VarChar(30)
+  fecha_adquisicion     DateTime
+  valor_adquisicion     Int
+  id_chip_asignado      Int?      @unique
+  fecha_asignacion_chip DateTime?
+  placa_almacen         String?   @db.VarChar(15)
+  modifica_f            DateTime  @default(now()) @updatedAt
+  modifica_u            String    @db.VarChar(15)
+
+  tipo_vehiculo   TipoVehiculo @relation(fields: [id_tipo_vehiculo], references: [id])
+  marca           Marca        @relation(fields: [id_marca], references: [id])
+  color           Color        @relation(fields: [id_color], references: [id])
+  dependencia     Dependencia  @relation("DependenciaVehiculo", fields: [id_dependencia_asignada], references: [id])
+  chip            Chip?        @relation(fields: [id_chip_asignado], references: [id])
+
+  mantenimientos      Mantenimiento[]
+  requisitos          ControlRequisito[]
+  componentes         ControlComponente[]
+  salidas             SalidaVehiculo[]
+  inspecciones        Inspeccion[]
+  historial_uso       HistorialUso[]
+  tanqueos            ControlTanqueo[]
+  fotos               FotoSalidaEntrada[]
+
+  @@map("ctv_vehiculos")
+}
+
+// ─── Conductores ─────────────────────────────────────────────────────────────
+
+model Conductor {
+  id                    Int       @id @default(autoincrement())
+  nombre_conductor      String    @db.VarChar(40)
+  cedula_conductor      String    @unique @db.VarChar(15)
+  licencia_conduccion   String    @db.VarChar(20)
+  categoria_licencia    String    @db.VarChar(5)
+  fecha_vence_licencia  DateTime
+  autorizacion_th       Int       @default(0)
+  fecha_autorizacion_th DateTime?
+  fecha_vence_th        DateTime?
+  telefono              Int?
+  id_dependencia_conductor Int
+  modifica_f            DateTime  @default(now()) @updatedAt
+  modifica_u            String    @db.VarChar(15)
+  usuario_id            Int?      @unique
+
+  dependencia  Dependencia @relation(fields: [id_dependencia_conductor], references: [id])
+  usuario      Usuario?    @relation(fields: [usuario_id], references: [id])
+
+  salidas      SalidaVehiculo[]
+  inspecciones Inspeccion[]
+  tanqueos     ControlTanqueo[]
+  tripulacion  Tripulacion[]
+
+  @@map("ctv_conductores")
+}
+
+// ─── Mantenimiento ────────────────────────────────────────────────────────────
+
+model Mantenimiento {
+  id                  Int       @id @default(autoincrement())
+  id_vehiculo         Int
+  tipo_mantenimiento  String    @db.VarChar(10)
+  descripcion         String    @db.VarChar(50)
+  fecha_ingreso       DateTime
+  kilometraje_ingreso Int?
+  horas_ingreso       Int?
+  proveedor_taller    String    @db.VarChar(50)
+  observacion_ingreso String?   @db.VarChar(200)
+  fecha_salida        DateTime?
+  kilometraje_salida  Int?
+  horas_salida        Int?
+  observacion_salida  String?   @db.VarChar(200)
+  fecha_factura       DateTime?
+  numero_factura      String?   @db.VarChar(20)
+  valor_factura       Int?
+  modifica_f          DateTime  @default(now()) @updatedAt
+  modifica_u          String    @db.VarChar(15)
+
+  vehiculo Vehiculo @relation(fields: [id_vehiculo], references: [id])
+
+  @@map("ctv_mantenimientos")
+}
+
+// ─── Control de Requisitos (SOAT, tecno, pólizas, etc.) ──────────────────────
+
+model ControlRequisito {
+  id               Int       @id @default(autoincrement())
+  id_vehiculo      Int
+  id_tipo_requisito Int
+  numero_requisito String    @db.VarChar(30)
+  empresa_expide   String    @db.VarChar(30)
+  fecha_expedicion DateTime
+  fecha_vencimiento DateTime
+  estado_requisito String    @db.VarChar(10)
+  observacion      String?   @db.VarChar(30)
+  modifica_f       DateTime  @default(now()) @updatedAt
+  modifica_u       String    @db.VarChar(15)
+
+  vehiculo      Vehiculo      @relation(fields: [id_vehiculo], references: [id])
+  tipo_requisito TipoRequisito @relation(fields: [id_tipo_requisito], references: [id])
+
+  @@map("ctv_control_requisitos")
+}
+
+// ─── Control de Componentes por Vehículo ─────────────────────────────────────
+
+model ControlComponente {
+  id            Int      @id @default(autoincrement())
+  id_vehiculo   Int
+  placa         String   @db.VarChar(6)
+  id_componente Int
+  modifica_f    DateTime @default(now()) @updatedAt
+  modifica_u    String   @db.VarChar(15)
+
+  vehiculo   Vehiculo   @relation(fields: [id_vehiculo], references: [id])
+  componente Componente @relation(fields: [id_componente], references: [id])
+
+  @@map("ctv_control_componentes")
+}
+
+// ─── PDFs (almacén genérico polimórfico) ─────────────────────────────────────
+
+model Pdf {
+  id             Int      @id @default(autoincrement())
+  nombre_tabla   String   @db.VarChar(30)
+  id_tabla       Int
+  ruta_base      String   @db.VarChar(100)
+  ruta_logica    String   @db.VarChar(100)
+  nombre_archivo String   @db.VarChar(50)
+  modifica_f     DateTime @default(now()) @updatedAt
+  modifica_u     String   @db.VarChar(15)
+
+  @@map("ctv_pdfs")
+}
+
+// ─── Inspecciones (Pre/Post operacional — llena el conductor) ─────────────────
+
+model Inspeccion {
+  id                        Int       @id @default(autoincrement())
+  fecha                     DateTime
+  hora                      DateTime
+  id_vehiculo               Int
+  placa_vehiculo            String    @db.VarChar(6)
+  id_conductor              Int
+  tipo_inspeccion           String    @db.VarChar(15)
+  kilometraje               Int
+  estado_motor              String    @db.VarChar(10)
+  nivel_refrigerante        String    @db.VarChar(10)
+  nivel_bateria             String    @db.VarChar(10)
+  estado_llantas_delanteras String    @db.VarChar(10)
+  estado_llantas_traseras   String    @db.VarChar(10)
+  presion_llantas           String    @db.VarChar(10)
+  estado_eje                String    @db.VarChar(10)
+  suspension                String    @db.VarChar(10)
+  luces_delanteras          Boolean
+  luces_traseras            Boolean
+  direccionales             Boolean
+  luces_freno               Boolean
+  luces_reversa             Boolean
+  bocina                    Boolean
+  tablero                   Boolean
+  frenos                    String    @db.VarChar(10)
+  cinturones                Boolean
+  extintor                  String    @db.VarChar(15)
+  botiquin                  String    @db.VarChar(20)
+  kit_carretera             String    @db.VarChar(20)
+  limpieza                  String    @db.VarChar(10)
+  carroceria                String    @db.VarChar(10)
+  vidrios                   String    @db.VarChar(15)
+  espejos                   String    @db.VarChar(15)
+  nivel_aceite              String    @db.VarChar(10)
+  fugas_aceite              Boolean
+  llanta_repuesto           Boolean
+  estado_llanta_repuesto    String    @db.VarChar(10)
+  apto_para_operar          Boolean
+  reportado_mantenimiento   Boolean   @default(false)
+  observaciones             String?   @db.VarChar(300)
+  modifica_f                DateTime  @default(now()) @updatedAt
+  modifica_u                String    @db.VarChar(15)
+
+  vehiculo  Vehiculo  @relation(fields: [id_vehiculo], references: [id])
+  conductor Conductor @relation(fields: [id_conductor], references: [id])
+
+  salida SalidaVehiculo?
+
+  @@map("ctv_inspecciones")
+}
+
+// ─── Salidas de Vehículos ─────────────────────────────────────────────────────
+
+model SalidaVehiculo {
+  id               Int       @id @default(autoincrement())
+  id_vehiculo      Int
+  placa_vehiculo   String    @db.VarChar(6)
+  id_conductor     Int
+  id_inspeccion    Int?      @unique
+  fecha_salida     DateTime
+  hora_salida      DateTime?
+  motivo_salida    String    @db.VarChar(200)
+  lugar_destino    String    @db.VarChar(50)
+  kilometraje_salida Int
+  id_autorizado_por  Int?
+  firma            String?   @db.VarChar(20)
+  id_dependencia_uso Int
+  fecha_entrada    DateTime?
+  hora_entrada     DateTime?
+  kilometraje_llegada Int?
+  observaciones    String?   @db.VarChar(200)
+  estado           String    @db.VarChar(20) @default("PENDIENTE")
+  motivo_rechazo   String?   @db.VarChar(200)
+  id_vigilante_salida Int?
+  id_vigilante_entrada Int?
+  modifica_f       DateTime  @default(now()) @updatedAt
+  modifica_u       String    @db.VarChar(15)
+
+  vehiculo          Vehiculo    @relation(fields: [id_vehiculo], references: [id])
+  conductor         Conductor   @relation(fields: [id_conductor], references: [id])
+  inspeccion_pre    Inspeccion? @relation(fields: [id_inspeccion], references: [id])
+  autorizador       Usuario?    @relation("Autorizador", fields: [id_autorizado_por], references: [id])
+  dependencia_uso   Dependencia @relation(fields: [id_dependencia_uso], references: [id])
+  vigilante_salida  Usuario?    @relation("VigilanteSalida", fields: [id_vigilante_salida], references: [id])
+  vigilante_entrada Usuario?    @relation("VigilanteEntrada", fields: [id_vigilante_entrada], references: [id])
+
+  tripulacion ControlTanqueo[]
+  tripulantes Tripulacion[]
+  fotos       FotoSalidaEntrada[]
+  historial   HistorialUso?
+
+  @@map("ctv_salidas_vehiculos")
+}
+
+// ─── Tripulación ──────────────────────────────────────────────────────────────
+
+model Tripulacion {
+  id            Int @id @default(autoincrement())
+  id_salida     Int
+  id_tripulante Int
+  modifica_f    DateTime @default(now()) @updatedAt
+  modifica_u    String   @db.VarChar(15)
+
+  salida     SalidaVehiculo @relation(fields: [id_salida], references: [id])
+  tripulante Conductor      @relation(fields: [id_tripulante], references: [id])
+
+  @@map("ctv_tripulacion")
+}
+
+// ─── Control de Tanqueo ───────────────────────────────────────────────────────
+
+model ControlTanqueo {
+  id                   Int      @id @default(autoincrement())
+  id_vehiculo          Int
+  id_salida            Int
+  placa_vehiculo       String   @db.VarChar(6)
+  fecha_tanqueo        DateTime
+  tipo_combustible     String   @db.VarChar(10)
+  cantidad_galones     Int
+  id_conductor_tanqueo Int
+  id_autorizador       Int
+  modifica_f           DateTime @default(now()) @updatedAt
+  modifica_u           String   @db.VarChar(15)
+
+  vehiculo   Vehiculo  @relation(fields: [id_vehiculo], references: [id])
+  salida     SalidaVehiculo @relation(fields: [id_salida], references: [id])
+  conductor  Conductor @relation(fields: [id_conductor_tanqueo], references: [id])
+  autorizador Usuario  @relation("AutorizadorTanqueo", fields: [id_autorizador], references: [id])
+
+  @@map("ctv_control_tanqueo")
+}
+
+// ─── Fotos Salida/Entrada (sube el vigilante) ─────────────────────────────────
+
+model FotoSalidaEntrada {
+  id            Int      @id @default(autoincrement())
+  id_salida     Int
+  id_vehiculo   Int
+  id_subido_por Int
+  tipo_accion   String   @db.VarChar(10)
+  ruta_base     String   @db.VarChar(100)
+  ruta_logica   String   @db.VarChar(100)
+  nombre_foto   String   @db.VarChar(50)
+  modifica_f    DateTime @default(now()) @updatedAt
+  modifica_u    String   @db.VarChar(15)
+
+  salida     SalidaVehiculo @relation(fields: [id_salida], references: [id])
+  vehiculo   Vehiculo       @relation(fields: [id_vehiculo], references: [id])
+  subido_por Usuario        @relation(fields: [id_subido_por], references: [id])
+
+  @@map("ctv_fotos_salida_entrada")
+}
+
+// ─── Historial de Uso ─────────────────────────────────────────────────────────
+
+model HistorialUso {
+  id                  Int      @id @default(autoincrement())
+  id_vehiculo         Int
+  id_salida           Int      @unique
+  fecha               DateTime
+  kilometraje_inicial Int
+  kilometraje_final   Int
+  horas_inicial       Int?
+  horas_final         Int?
+  cantidad_recorridos Int
+  observaciones       String?  @db.VarChar(200)
+  modifica_f          DateTime @default(now()) @updatedAt
+  modifica_u          String   @db.VarChar(15)
+
+  vehiculo Vehiculo       @relation(fields: [id_vehiculo], references: [id])
+  salida   SalidaVehiculo @relation(fields: [id_salida], references: [id])
+
+  @@map("ctv_historial_uso")
+}
