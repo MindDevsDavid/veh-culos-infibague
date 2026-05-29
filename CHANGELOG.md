@@ -6,6 +6,14 @@ Registro de cambios por sesión de desarrollo. Orden: más reciente primero.
 
 ## [Sin commit] — 2026-05-29
 
+### docs(readme) — actualización
+- Columnas BD nuevas: `ctv_conductores.categoria_licencia_2/3 + fecha_vence_licencia_2/3` (con nota de que su ausencia rompe crear conductor), `ctv_pdfs.etiqueta`
+- Endpoints nuevos: tanqueos `/solicitar`, `/:id/archivo`, `/:id`; inspecciones `/:id`, `/:id/fotos`
+- Notas técnicas: MyISAM sin transacciones (compensación manual), DATETIME no acepta string de hora sola, almacenamiento de fotos en disco + etiqueta, restauración de sesión vía refresh
+- Características: fotos etiquetadas, mantenimiento dual view + PDF oficial, tanqueo PDF obligatorio, preview de fotos
+
+## [Sin commit] — 2026-05-29
+
 ### Fix — hora de inspección quedaba en blanco
 - **Causa**: el commit 7f330d6 cambió el insert de `hora` a un string `"HH:MM:SS"` (`ahora.toTimeString().slice(0,8)`), pero la columna `hora` es **DATETIME**. MySQL en modo no estricto guardaba zero-date `0000-00-00` → se mostraba vacío. No se notó porque no se creó inspección nueva hasta hoy
 - `backend/src/routes/inspecciones.ts` — insert de `hora` vuelve a usar el `Date` completo (`ahora`); el frontend ya extrae solo la hora al mostrar

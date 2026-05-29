@@ -32,16 +32,16 @@
 - Control de conductores, licencias y alertas de vencimiento
 - Bloqueo de acceso a conductores con licencia vencida
 - Solicitudes de salida con aprobación por autorizador
-- Inspecciones pre y postoperacionales con checklist completo
-- Control de mantenimientos preventivos y correctivos con factura PDF adjunta
+- Inspecciones pre y postoperacionales con checklist completo, fotos etiquetadas (frente/atrás/lados + adicionales) y visualización en el detalle
+- Control de mantenimientos preventivos y correctivos con factura PDF adjunta; vistas Historial y Por vehículo; impresión del formato oficial INFIbagué por vehículo
 - Gestión de requisitos legales (SOAT, tecnomecánica, pólizas) con alertas de vencimiento
-- Control de tanqueos de combustible con flujo solicitud → autorización almacenista
+- Control de tanqueos de combustible con flujo solicitud → autorización almacenista y comprobante PDF obligatorio
 - Sistema de chips de gasolina con asignación a vehículo
 - Control de componentes por vehículo agrupado visualmente
 - Catálogos CRUD: marcas, colores, tipos vehículo, tipos requisito, tipos componente, dependencias
 - Historial de uso y kilometraje por viaje con detalle de tanqueos
-- Carga de fotografías en check de salida/entrada
-- Carga de documentos PDF para requisitos y facturas de mantenimiento
+- Carga de fotografías con previsualización (thumbnail) en inspecciones y check de salida/entrada
+- Carga de documentos PDF para requisitos, facturas de mantenimiento y tanqueos
 - Panel de estadísticas en dashboard con alertas de requisitos y licencias
 - Autenticación JWT con refresh tokens (cookies HttpOnly)
 - Control de acceso por rol en backend (middleware `allowRoles`) y UI (botones condicionados)
@@ -221,7 +221,7 @@ CREATE DATABASE ctv_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 | `ctv_control_componentes` | Componentes asignados a vehículos |
 | `ctv_control_tanqueo` | Solicitudes de tanqueo por conductor |
 | `ctv_fotos_salida_entrada` | Fotos de check salida/entrada |
-| `ctv_pdfs` | Archivos PDF generales (requisitos, facturas) — almacenados como BLOB |
+| `ctv_pdfs` | Archivos adjuntos: PDFs como BLOB (requisitos, facturas, tanqueos) y fotos de inspección en disco; columna `etiqueta` identifica cada foto |
 
 **Catálogos:**
 
@@ -263,7 +263,18 @@ ALTER TABLE ctv_salidas_vehiculos ADD COLUMN id_vigilante_entrada INT NULL;
 ALTER TABLE ctv_salidas_vehiculos ADD COLUMN motivo_rechazo TEXT NULL;
 ALTER TABLE ctv_fotos_salida_entrada ADD COLUMN id_salida INT NULL;
 ALTER TABLE ctv_fotos_salida_entrada ADD COLUMN id_subido_por INT NULL;
+
+-- Licencias adicionales del conductor (hasta 3 categorías)
+ALTER TABLE ctv_conductores ADD COLUMN categoria_licencia_2 VARCHAR(5) NULL;
+ALTER TABLE ctv_conductores ADD COLUMN fecha_vence_licencia_2 DATE NULL;
+ALTER TABLE ctv_conductores ADD COLUMN categoria_licencia_3 VARCHAR(5) NULL;
+ALTER TABLE ctv_conductores ADD COLUMN fecha_vence_licencia_3 DATE NULL;
+
+-- Etiqueta para identificar cada foto/PDF (ej. Frente, Atrás, Lado izquierdo)
+ALTER TABLE ctv_pdfs ADD COLUMN etiqueta VARCHAR(40) NULL;
 ```
+
+> **Importante:** sin las columnas `categoria_licencia_2/3` la creación de conductores falla con error 500 (`Unknown column`). Son obligatorias.
 
 ### 5. Crear `backend/.env`
 
@@ -373,7 +384,9 @@ Desde otro equipo de la red interna: `http://<IP-del-servidor>:5173`
 | Método | Endpoint | Roles | Descripción |
 |--------|----------|-------|-------------|
 | `GET` | `/api/inspecciones` | todos | Listar inspecciones (filtradas por rol) |
-| `POST` | `/api/inspecciones` | CONDUCTOR | Crear inspección (multipart, admite fotos) |
+| `GET` | `/api/inspecciones/:id` | ADMIN, AUTORIZADOR, CONDUCTOR | Obtener inspección |
+| `GET` | `/api/inspecciones/:id/fotos` | ADMIN, AUTORIZADOR, CONDUCTOR | Fotos adjuntas con etiqueta |
+| `POST` | `/api/inspecciones` | CONDUCTOR | Crear inspección (multipart, hasta 12 fotos etiquetadas) |
 
 ### Historial de Uso
 
@@ -408,9 +421,12 @@ Desde otro equipo de la red interna: `http://<IP-del-servidor>:5173`
 
 | Método | Endpoint | Roles | Descripción |
 |--------|----------|-------|-------------|
-| `GET` | `/api/tanqueos` | ADMIN, ALMACENISTA, CONSULTAS | Listar tanqueos |
-| `POST` | `/api/tanqueos` | CONDUCTOR, ADMIN | Registrar solicitud de tanqueo |
-| `PUT` | `/api/tanqueos/:id/autorizar` | ALMACENISTA | Autorizar tanqueo |
+| `GET` | `/api/tanqueos` | ADMIN, AUTORIZADOR, ALMACENISTA, CONDUCTOR, CONSULTAS | Listar tanqueos (conductor ve solo los suyos) |
+| `GET` | `/api/tanqueos/:id` | ADMIN, AUTORIZADOR, ALMACENISTA, CONDUCTOR, CONSULTAS | Obtener tanqueo |
+| `POST` | `/api/tanqueos/solicitar` | CONDUCTOR, ADMIN | Solicitar tanqueo en viaje activo (multipart, PDF obligatorio) |
+| `POST` | `/api/tanqueos` | ADMIN | Registro manual ya autorizado (multipart, PDF obligatorio) |
+| `PUT` | `/api/tanqueos/:id/autorizar` | ADMIN, ALMACENISTA | Autorizar tanqueo |
+| `GET` | `/api/tanqueos/:id/archivo` | todos los lectores | Descargar PDF adjunto |
 | `DELETE` | `/api/tanqueos/:id` | ADMIN | Eliminar tanqueo |
 
 ### Chips de Gasolina
@@ -491,9 +507,17 @@ Desde otro equipo de la red interna: `http://<IP-del-servidor>:5173`
 - Prisma no soporta esta versión → todo el acceso a BD es SQL raw con `mysql2/promise`.
 - El pool se recrea automáticamente ante errores `ECONNRESET` (MySQL legacy cierra conexiones inactivas sin previo aviso).
 - `timezone: 'local'` en el pool para evitar desfases de hora.
+- **Tablas MyISAM**: el motor no soporta transacciones, así que `beginTransaction/rollback` no revierte nada. Las operaciones multi-tabla (ej. crear conductor = usuario + conductor) usan **compensación manual**: si el segundo INSERT falla, se borra a mano el primero. No confiar en el rollback.
+- Columnas `DATETIME` no aceptan strings de hora sola (`"HH:MM:SS"`) → guardan zero-date `0000-00-00`. Insertar siempre un `Date` completo.
 
-### Almacenamiento de PDFs
-PDFs (requisitos, facturas de mantenimiento) se almacenan como BLOB en la tabla `ctv_pdfs` con la estructura `(nombre_tabla, id_tabla, nombre_archivo, contenido)`. Se requiere `SET SESSION max_allowed_packet = 67108864` antes de cada INSERT para soportar archivos de hasta 64 MB.
+### Almacenamiento de archivos
+- **PDFs** (requisitos, facturas de mantenimiento, comprobantes de tanqueo) → BLOB en `ctv_pdfs` `(nombre_tabla, id_tabla, nombre_archivo, etiqueta, contenido)`. Requiere `SET SESSION max_allowed_packet = 67108864` antes del INSERT (archivos hasta 64 MB).
+- **Fotos de inspecciones** → disco en `uploads/inspecciones/`, registradas en `ctv_pdfs` con `ruta_logica`; servidas estáticas en `/uploads`. Cada foto guarda su `etiqueta` (Frente, Atrás, Lado izquierdo, Lado derecho, Adicional N). Límite 15 MB por imagen.
+
+### Autenticación y restauración de sesión
+- Access token en memoria (no se persiste); refresh token en cookie HttpOnly (7 días).
+- Al cargar la app, `AuthContext` llama `/auth/refresh` para restaurar la sesión desde la cookie. Sin esto, recargar la página (ej. móvil al volver de la cámara) tiraba al login.
+- El interceptor de axios, ante un 401, intenta `/auth/refresh` y reintenta la request una vez; solo desloguea si el refresh falla.
 
 ### Relación conductor ↔ usuario
 `ctv_conductores.id` ≠ `usuarios.id`. El vínculo es `ctv_conductores.id_usuario = usuarios.id`.  
