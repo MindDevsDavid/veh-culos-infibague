@@ -32,7 +32,7 @@ export const uploadFotos = multer({
     if (file.mimetype.startsWith('image/')) cb(null, true)
     else cb(new Error('Solo se permiten imágenes'))
   },
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 15 * 1024 * 1024 },
 })
 
 export const uploadFotosSalida = multer({
@@ -41,5 +41,5 @@ export const uploadFotosSalida = multer({
     if (file.mimetype.startsWith('image/')) cb(null, true)
     else cb(new Error('Solo se permiten imágenes'))
   },
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 15 * 1024 * 1024 },
 })

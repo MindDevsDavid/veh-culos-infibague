@@ -1,11 +1,40 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CheckSquare, Filter, X, CheckCircle, AlertTriangle, Wrench } from 'lucide-react'
+import { CheckSquare, Filter, X, CheckCircle, AlertTriangle, Wrench, ImageIcon } from 'lucide-react'
 import DataTable from '../../components/DataTable'
 import type { Column } from '../../components/DataTable'
 import { inspeccionesApi } from '../../api/inspecciones'
 import type { Inspeccion } from '../../types'
 import { useVehiculos } from '../../hooks/useVehiculos'
+
+function FotosInspeccion({ id }: { id: number }) {
+  const { data: fotos = [], isLoading } = useQuery({
+    queryKey: ['inspeccion-fotos', id],
+    queryFn: () => inspeccionesApi.fotos(id),
+  })
+
+  if (isLoading) return <p className="text-sm text-slate-400">Cargando fotos...</p>
+  if (fotos.length === 0) return <p className="text-sm text-slate-400 italic">Sin fotos adjuntas.</p>
+
+  // Fallback por posición para inspecciones viejas sin etiqueta guardada
+  // (el orden de carga original era: frente, atrás, lado izq, lado der, adicionales).
+  const fallback = ['Frente', 'Atrás', 'Lado izquierdo', 'Lado derecho']
+  const labelFor = (etiqueta: string | null, idx: number) =>
+    etiqueta ?? fallback[idx] ?? `Adicional ${idx - fallback.length + 1}`
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {fotos.map((f, idx) => (
+        <div key={idx} className="flex flex-col gap-1">
+          <a href={f.url} target="_blank" rel="noopener noreferrer" title="Ver en grande">
+            <img src={f.url} alt={labelFor(f.etiqueta, idx)} className="w-full h-28 object-cover rounded-lg border border-slate-200 hover:opacity-90 transition-opacity" />
+          </a>
+          <span className="text-[11px] font-medium text-slate-600 text-center">{labelFor(f.etiqueta, idx)}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function Campo({ label, value }: { label: string; value?: string | null }) {
   if (value == null || value === '') return null
@@ -137,6 +166,14 @@ function DetalleModal({ i, onClose }: { i: Inspeccion; onClose: () => void }) {
               <p className="text-sm text-slate-700">{(i as any).observaciones}</p>
             </Section>
           )}
+
+          <Section title="Evidencia fotográfica">
+            <div className="flex items-center gap-1.5 mb-2 text-slate-400">
+              <ImageIcon size={13} />
+              <span className="text-[11px]">Click en una foto para verla en grande</span>
+            </div>
+            <FotosInspeccion id={i.id} />
+          </Section>
         </div>
       </div>
     </div>

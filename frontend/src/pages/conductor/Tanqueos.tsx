@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Fuel } from 'lucide-react'
+import { Fuel, ExternalLink } from 'lucide-react'
 import api from '../../api/client'
 import { useSalidas } from '../../hooks/useSalidas'
 import DataTable from '../../components/DataTable'
@@ -35,6 +35,7 @@ export default function ConductorTanqueos() {
   const qc = useQueryClient()
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [archivo, setArchivo] = useState<File | null>(null)
 
   const { data: tanqueos = [], isLoading } = useQuery<Tanqueo[]>({
     queryKey: ['tanqueos'],
@@ -45,13 +46,14 @@ export default function ConductorTanqueos() {
   const viajeActivo = salidas.find((s: any) => ESTADOS_ACTIVOS.includes(s.estado))
 
   const solicitar = useMutation({
-    mutationFn: (data: { tipo_combustible: string; cantidad_galones: number }) =>
+    mutationFn: (data: FormData) =>
       api.post('/tanqueos/solicitar', data).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tanqueos'] })
       toast.success('Tanqueo solicitado')
       setModal(false)
       setForm(emptyForm)
+      setArchivo(null)
     },
     onError: (e: any) => toast.error(e.response?.data?.error ?? 'Error al solicitar tanqueo'),
   })
@@ -61,10 +63,26 @@ export default function ConductorTanqueos() {
       setForm(f => ({ ...f, [k]: e.target.value }))
   }
 
+  function openModal() { setForm(emptyForm); setArchivo(null); setModal(true) }
+
+  async function verPdf(id: number) {
+    try {
+      const res = await api.get(`/tanqueos/${id}/archivo`, { responseType: 'blob' })
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      const w = window.open(url, '_blank')
+      if (w) w.addEventListener('beforeunload', () => URL.revokeObjectURL(url))
+    } catch { toast.error('No hay archivo adjunto') }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.cantidad_galones) { toast.error('Ingresa la cantidad de galones'); return }
-    await solicitar.mutateAsync({ tipo_combustible: form.tipo_combustible, cantidad_galones: Number(form.cantidad_galones) })
+    if (!archivo) { toast.error('Debes adjuntar el documento PDF'); return }
+    const fd = new FormData()
+    fd.append('tipo_combustible', form.tipo_combustible)
+    fd.append('cantidad_galones', String(Number(form.cantidad_galones)))
+    if (archivo) fd.append('archivo', archivo)
+    await solicitar.mutateAsync(fd)
   }
 
   const columns: Column<Tanqueo>[] = [
@@ -85,7 +103,7 @@ export default function ConductorTanqueos() {
           <p className="text-sm text-slate-500">{tanqueos.length} registros</p>
         </div>
         <button
-          onClick={() => setModal(true)}
+          onClick={openModal}
           disabled={!viajeActivo}
           title={!viajeActivo ? 'Necesitas un viaje activo para solicitar un tanqueo' : ''}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
@@ -106,7 +124,11 @@ export default function ConductorTanqueos() {
         </div>
       )}
 
-      <DataTable columns={columns} data={tanqueos} keyField="id" loading={isLoading} />
+      <DataTable columns={columns} data={tanqueos} keyField="id" loading={isLoading}
+        actions={t => (
+          <button title="Ver factura PDF" onClick={() => verPdf(t.id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"><ExternalLink size={15} /></button>
+        )}
+      />
 
       <Modal open={modal} onClose={() => setModal(false)} title="Solicitar Tanqueo" size="sm">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -120,6 +142,11 @@ export default function ConductorTanqueos() {
             {['GASOLINA', 'DIESEL', 'GAS'].map(c => <option key={c} value={c}>{c}</option>)}
           </FormField>
           <FormField label="Cantidad (galones)" type="number" required value={form.cantidad_galones} onChange={set('cantidad_galones')} />
+          <div>
+            <label className="text-sm font-medium text-slate-700 block mb-1">Factura PDF <span className="text-red-500">*</span></label>
+            <input type="file" accept="application/pdf" required onChange={e => setArchivo(e.target.files?.[0] ?? null)}
+              className="text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+          </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setModal(false)} className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">Cancelar</button>
             <button type="submit" disabled={solicitar.isPending} className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">

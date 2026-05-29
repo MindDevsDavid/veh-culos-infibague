@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express'
-import { query, queryOne, run } from '../utils/db'
+import { query, queryOne, run, transaction } from '../utils/db'
 import { authenticate } from '../middleware/auth'
 import { allowRoles } from '../middleware/roles'
+import { uploadPdf } from '../middleware/upload'
 
 const router = Router()
 router.use(authenticate)
@@ -46,10 +47,28 @@ router.get('/:id', allowRoles('ADMIN', 'AUTORIZADOR', 'ALMACENISTA', 'CONDUCTOR'
   res.json(mapT(row))
 })
 
+// Guarda PDF adjunto en ctv_pdfs (insert o update) para un tanqueo
+async function guardarPdfTanqueo(idTanqueo: number, file: Express.Multer.File, email: string) {
+  const old = await queryOne<any>("SELECT id FROM ctv_pdfs WHERE nombre_tabla='ctv_control_tanqueada' AND id_tabla=?", [idTanqueo])
+  await transaction(async conn => {
+    await conn.query('SET SESSION max_allowed_packet = 67108864')
+    if (old) {
+      await conn.query('UPDATE ctv_pdfs SET nombre_archivo=?, contenido=?, modifica_u=? WHERE id=?',
+        [file.originalname, file.buffer, email, old.id])
+    } else {
+      await conn.query(
+        'INSERT INTO ctv_pdfs (nombre_tabla, id_tabla, nombre_archivo, contenido, modifica_u) VALUES (?, ?, ?, ?, ?)',
+        ['ctv_control_tanqueada', idTanqueo, file.originalname, file.buffer, email],
+      )
+    }
+  })
+}
+
 // CONDUCTOR solicita tanqueo — auto-fill desde viaje activo
-router.post('/solicitar', allowRoles('CONDUCTOR', 'ADMIN'), async (req: Request, res: Response) => {
+router.post('/solicitar', allowRoles('CONDUCTOR', 'ADMIN'), uploadPdf.single('archivo'), async (req: Request, res: Response) => {
   const { tipo_combustible, cantidad_galones } = req.body
   if (!cantidad_galones) { res.status(400).json({ error: 'cantidad_galones es requerido' }); return }
+  if (!req.file) { res.status(400).json({ error: 'El documento PDF es obligatorio' }); return }
 
   const conductor = await queryOne<any>(
     'SELECT id FROM ctv_conductores WHERE id_usuario = ? LIMIT 1',
@@ -72,8 +91,23 @@ router.post('/solicitar', allowRoles('CONDUCTOR', 'ADMIN'), async (req: Request,
     [viajeActivo.id_vehiculo, viajeActivo.id, viajeActivo.placa_vehiculo,
      tipo_combustible ?? null, Number(cantidad_galones), conductor.id, req.user!.email]
   )
+
+  if (req.file) await guardarPdfTanqueo(r.insertId, req.file, req.user!.email)
+
   const row = await queryOne(SELECT_T + ' WHERE t.id = ?', [r.insertId])
   res.status(201).json(mapT(row))
+})
+
+// Descargar PDF adjunto del tanqueo
+router.get('/:id/archivo', allowRoles('ADMIN', 'AUTORIZADOR', 'ALMACENISTA', 'CONDUCTOR', 'CONSULTAS'), async (req: Request, res: Response) => {
+  const pdf = await queryOne<any>(
+    "SELECT nombre_archivo, contenido FROM ctv_pdfs WHERE nombre_tabla='ctv_control_tanqueada' AND id_tabla=?",
+    [req.params.id],
+  )
+  if (!pdf) { res.status(404).json({ error: 'No hay archivo adjunto' }); return }
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', `inline; filename="${pdf.nombre_archivo}"`)
+  res.send(pdf.contenido)
 })
 
 // ALMACENISTA / ADMIN autoriza
@@ -92,18 +126,22 @@ router.put('/:id/autorizar', allowRoles('ADMIN', 'ALMACENISTA'), async (req: Req
 })
 
 // ADMIN: registro manual (ya autorizado)
-router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
+router.post('/', allowRoles('ADMIN'), uploadPdf.single('archivo'), async (req: Request, res: Response) => {
   const { id_vehiculo, id_salida, placa_vehiculo, fecha_tanqueo, tipo_combustible, cantidad_galones, id_conductor_tanqueo } = req.body
   if (!id_vehiculo || !id_salida || !cantidad_galones) {
     res.status(400).json({ error: 'Faltan campos requeridos' }); return
   }
+  if (!req.file) { res.status(400).json({ error: 'El documento PDF es obligatorio' }); return }
   const r = await run(
     `INSERT INTO ctv_control_tanqueada
      (id_vehiculo, id_salida, placa_vehiculo, fecha_tanqueo, tipo_combustible, cantidad_galones, id_conductor_tanqueo, id_autorizador, estado, modifica_u)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'AUTORIZADA', ?)`,
     [id_vehiculo, id_salida, placa_vehiculo ?? '', fecha_tanqueo ? new Date(fecha_tanqueo) : new Date(),
-     tipo_combustible ?? null, cantidad_galones, id_conductor_tanqueo ?? null, req.user!.sub, req.user!.email]
+     tipo_combustible ?? null, cantidad_galones, id_conductor_tanqueo ? Number(id_conductor_tanqueo) : null, req.user!.sub, req.user!.email]
   )
+
+  if (req.file) await guardarPdfTanqueo(r.insertId, req.file, req.user!.email)
+
   const row = await queryOne(SELECT_T + ' WHERE t.id = ?', [r.insertId])
   res.status(201).json(mapT(row))
 })

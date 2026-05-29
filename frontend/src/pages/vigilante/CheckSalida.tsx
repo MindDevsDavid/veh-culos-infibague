@@ -5,6 +5,7 @@ import { Camera } from 'lucide-react'
 import { salidasApi } from '../../api/salidas'
 import { useCheckSalida } from '../../hooks/useSalidas'
 import StatusBadge, { MAPS } from '../../components/StatusBadge'
+import FotoThumb from '../../components/FotoThumb'
 
 export default function CheckSalida() {
   const { id } = useParams<{ id: string }>()
@@ -77,9 +78,9 @@ export default function CheckSalida() {
               className="text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
             />
             {fotos.length > 0 && (
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 {fotos.map((f, i) => (
-                  <div key={i} className="text-xs text-slate-500 bg-slate-50 rounded px-2 py-1">{f.name}</div>
+                  <FotoThumb key={i} file={f} onRemove={() => setFotos(prev => prev.filter((_, idx) => idx !== i))} />
                 ))}
               </div>
             )}

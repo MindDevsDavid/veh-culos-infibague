@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
-import { query, queryOne, run, transaction } from '../utils/db'
+import { query, queryOne, run } from '../utils/db'
 import { authenticate } from '../middleware/auth'
 import { allowRoles } from '../middleware/roles'
 
@@ -52,33 +52,34 @@ router.post('/', allowRoles('ADMIN'), async (req: Request, res: Response) => {
 
   const hash = await bcrypt.hash(password, 10)
 
+  // Las tablas son MyISAM: las transacciones no hacen rollback. Compensamos a mano —
+  // si falla el INSERT del conductor, borramos el usuario recién creado para no dejar huérfanos.
+  const userRes = await run(
+    'INSERT INTO usuarios (nombre, email, password_hash, rol, activo, modifica_u) VALUES (?, ?, ?, ?, 1, ?)',
+    [nombre_conductor, email, hash, 'CONDUCTOR', req.user!.email],
+  )
+  const id_usuario = userRes.insertId
+
   let condId: number
   try {
-    condId = await transaction(async conn => {
-      const [userResult] = await conn.query(
-        'INSERT INTO usuarios (nombre, email, password_hash, rol, activo, modifica_u) VALUES (?, ?, ?, ?, 1, ?)',
-        [nombre_conductor, email, hash, 'CONDUCTOR', req.user!.email],
-      ) as any
-      const id_usuario = (userResult as any).insertId
-
-      const [condResult] = await conn.query(
-        `INSERT INTO ctv_conductores
-         (nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia,
-          fecha_vence_licencia, categoria_licencia_2, fecha_vence_licencia_2, categoria_licencia_3, fecha_vence_licencia_3, autorizacion_th, fecha_autorizacion_th, fecha_vence_th,
-          telefono, id_dependencia_conductor, id_usuario, modifica_u)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia ?? null,
-          fecha_vence_licencia, categoria_licencia_2 ?? null, fecha_vence_licencia_2 ?? null,
-          categoria_licencia_3 ?? null, fecha_vence_licencia_3 ?? null, autorizacion_th ?? null,
-          fecha_autorizacion_th ?? null, fecha_vence_th ?? null,
-          telefono ?? null, id_dependencia_conductor, id_usuario,
-          req.user!.email,
-        ],
-      ) as any
-      return (condResult as any).insertId
-    })
+    const condRes = await run(
+      `INSERT INTO ctv_conductores
+       (nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia,
+        fecha_vence_licencia, categoria_licencia_2, fecha_vence_licencia_2, categoria_licencia_3, fecha_vence_licencia_3, autorizacion_th, fecha_autorizacion_th, fecha_vence_th,
+        telefono, id_dependencia_conductor, id_usuario, modifica_u)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        nombre_conductor, cedula_conductor, licencia_conduccion, categoria_licencia ?? null,
+        fecha_vence_licencia, categoria_licencia_2 ?? null, fecha_vence_licencia_2 ?? null,
+        categoria_licencia_3 ?? null, fecha_vence_licencia_3 ?? null, autorizacion_th ?? null,
+        fecha_autorizacion_th ?? null, fecha_vence_th ?? null,
+        telefono ?? null, id_dependencia_conductor, id_usuario,
+        req.user!.email,
+      ],
+    )
+    condId = condRes.insertId
   } catch (err: any) {
+    await run('DELETE FROM usuarios WHERE id = ?', [id_usuario])
     if (err.code === 'ER_DUP_ENTRY') {
       res.status(400).json({ error: `La cédula ${cedula_conductor} ya está registrada` }); return
     }

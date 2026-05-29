@@ -7,6 +7,7 @@ import { useVehiculos } from '../hooks/useVehiculos'
 import { useConductores } from '../hooks/useConductores'
 import { useSalidas, useVehiculosOcupados, useSalida } from '../hooks/useSalidas'
 import { useAuth } from '../context/AuthContext'
+import FotoThumb from './FotoThumb'
 
 type Estado10  = 'BUENO' | 'REGULAR' | 'MALO'
 type Extintor  = 'VIGENTE' | 'VENCIDO' | 'NO_TIENE'
@@ -60,6 +61,7 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
   const [fotoAtras, setFotoAtras] = useState<File | null>(null)
   const [fotoLadoIzq, setFotoLadoIzq] = useState<File | null>(null)
   const [fotoLadoDer, setFotoLadoDer] = useState<File | null>(null)
+  const [fotosExtra, setFotosExtra] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [savedId, setSavedId] = useState<number | null>(null)
   const { data: vehiculos = [] } = useVehiculos()
@@ -112,10 +114,17 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
     fd.set('tipo_inspeccion', tipo)
     if (salidaId) fd.append('id_salida', String(salidaId))
     
-    if (fotoFrente) fd.append('fotos', fotoFrente)
-    if (fotoAtras) fd.append('fotos', fotoAtras)
-    if (fotoLadoIzq) fd.append('fotos', fotoLadoIzq)
-    if (fotoLadoDer) fd.append('fotos', fotoLadoDer)
+    // Cada foto va acompañada de su etiqueta (mismo orden) para identificarla luego.
+    const fotosConEtiqueta: { file: File; label: string }[] = []
+    if (fotoFrente) fotosConEtiqueta.push({ file: fotoFrente, label: 'Frente' })
+    if (fotoAtras) fotosConEtiqueta.push({ file: fotoAtras, label: 'Atrás' })
+    if (fotoLadoIzq) fotosConEtiqueta.push({ file: fotoLadoIzq, label: 'Lado izquierdo' })
+    if (fotoLadoDer) fotosConEtiqueta.push({ file: fotoLadoDer, label: 'Lado derecho' })
+    fotosExtra.forEach((f, idx) => fotosConEtiqueta.push({ file: f, label: `Adicional ${idx + 1}` }))
+    fotosConEtiqueta.forEach(({ file, label }) => {
+      fd.append('fotos', file)
+      fd.append('etiquetas', label)
+    })
 
     try {
       const saved = await inspeccionesApi.create(fd)
@@ -352,19 +361,49 @@ export default function InspeccionForm({ tipo, salidaId }: Props) {
                   <div>
                     <span className="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Foto de frente</span>
                     <input type="file" accept="image/*" {...captureAttr} onChange={e => setFotoFrente(e.target.files?.[0] ?? null)} className={inputCls} />
+                    {fotoFrente && <FotoThumb file={fotoFrente} onRemove={() => setFotoFrente(null)} className="mt-2 w-32" />}
                   </div>
                   <div>
                     <span className="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Foto de atrás</span>
                     <input type="file" accept="image/*" {...captureAttr} onChange={e => setFotoAtras(e.target.files?.[0] ?? null)} className={inputCls} />
+                    {fotoAtras && <FotoThumb file={fotoAtras} onRemove={() => setFotoAtras(null)} className="mt-2 w-32" />}
                   </div>
                   <div>
                     <span className="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Foto de lado (Izquierdo)</span>
                     <input type="file" accept="image/*" {...captureAttr} onChange={e => setFotoLadoIzq(e.target.files?.[0] ?? null)} className={inputCls} />
+                    {fotoLadoIzq && <FotoThumb file={fotoLadoIzq} onRemove={() => setFotoLadoIzq(null)} className="mt-2 w-32" />}
                   </div>
                   <div>
                     <span className="block text-[11px] font-semibold text-slate-500 uppercase mb-1">Foto de lado (Derecho)</span>
                     <input type="file" accept="image/*" {...captureAttr} onChange={e => setFotoLadoDer(e.target.files?.[0] ?? null)} className={inputCls} />
+                    {fotoLadoDer && <FotoThumb file={fotoLadoDer} onRemove={() => setFotoLadoDer(null)} className="mt-2 w-32" />}
                   </div>
+                </div>
+
+                {/* Fotos adicionales dinámicas */}
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="block text-[11px] font-semibold text-slate-500 uppercase">Fotos adicionales</span>
+                    <span className="text-[10px] text-slate-400">{fotosExtra.length} agregada(s)</span>
+                  </div>
+                  {fotosExtra.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-2">
+                      {fotosExtra.map((f, i) => (
+                        <FotoThumb key={i} file={f} onRemove={() => setFotosExtra(prev => prev.filter((_, idx) => idx !== i))} />
+                      ))}
+                    </div>
+                  )}
+                  {fotosExtra.length < 8 && (
+                    <input
+                      type="file" accept="image/*" {...captureAttr}
+                      onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (file) setFotosExtra(prev => [...prev, file])
+                        e.target.value = ''
+                      }}
+                      className={inputCls}
+                    />
+                  )}
                 </div>
               </div>
             )

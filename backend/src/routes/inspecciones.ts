@@ -56,7 +56,20 @@ router.get('/:id', allowRoles('ADMIN', 'AUTORIZADOR', 'CONDUCTOR'), async (req: 
   res.json(mapInsp(row as any))
 })
 
-router.post('/', allowRoles('ADMIN', 'CONDUCTOR'), uploadFotos.array('fotos', 4), async (req: Request, res: Response) => {
+// Fotos adjuntas de una inspección (servidas como estáticos en /uploads)
+router.get('/:id/fotos', allowRoles('ADMIN', 'AUTORIZADOR', 'CONDUCTOR'), async (req: Request, res: Response) => {
+  const rows = await query<any>(
+    "SELECT nombre_archivo, etiqueta, ruta_logica FROM ctv_pdfs WHERE nombre_tabla='ctv_inspecciones' AND id_tabla=? ORDER BY id ASC",
+    [req.params.id],
+  )
+  res.json(rows.map(r => ({
+    nombre_archivo: r.nombre_archivo,
+    etiqueta: r.etiqueta ?? null,
+    url: '/' + String(r.ruta_logica).replace(/^\/+/, ''),
+  })))
+})
+
+router.post('/', allowRoles('ADMIN', 'CONDUCTOR'), uploadFotos.array('fotos', 12), async (req: Request, res: Response) => {
   const {
     id_vehiculo, placa_vehiculo, id_conductor, tipo_inspeccion, kilometraje,
     id_salida,
@@ -118,7 +131,8 @@ router.post('/', allowRoles('ADMIN', 'CONDUCTOR'), uploadFotos.array('fotos', 4)
   const toBool = (v: any) => (v === true || v === 'true' || v === '1' || v === 1) ? 1 : 0
   const ahora = new Date()
   const fechaHoy = ahora.toISOString().slice(0, 10)
-  const horaAhora = ahora.toTimeString().slice(0, 8)
+  // La columna `hora` es DATETIME: guardar un string "HH:MM:SS" da NULL.
+  // Guardamos el datetime completo; el frontend extrae solo la hora al mostrar.
 
   const r = await run(
     `INSERT INTO ctv_inspecciones
@@ -141,7 +155,7 @@ router.post('/', allowRoles('ADMIN', 'CONDUCTOR'), uploadFotos.array('fotos', 4)
              ?,
              ?, ?, ?, ?)`,
     [
-      fechaHoy, horaAhora, Number(id_vehiculo), placa_vehiculo ?? '', Number(id_conductor), tipo_inspeccion, Number(kilometraje),
+      fechaHoy, ahora, Number(id_vehiculo), placa_vehiculo ?? '', Number(id_conductor), tipo_inspeccion, Number(kilometraje),
       estado_motor ?? null, nivel_refrigerante ?? null, nivel_bateria ?? null,
       estado_llantas_delanteras ?? null, estado_llantas_traseras ?? null, presion_llantas ?? null,
       estado_eje ?? null, suspension ?? null,
@@ -154,11 +168,14 @@ router.post('/', allowRoles('ADMIN', 'CONDUCTOR'), uploadFotos.array('fotos', 4)
     ],
   )
 
-  const fotos = req.files as Express.Multer.File[] | undefined
-  for (const foto of fotos ?? []) {
+  const fotos = (req.files as Express.Multer.File[] | undefined) ?? []
+  const etiquetasRaw = req.body.etiquetas
+  const etiquetas: string[] = Array.isArray(etiquetasRaw) ? etiquetasRaw : etiquetasRaw ? [etiquetasRaw] : []
+  for (let idx = 0; idx < fotos.length; idx++) {
+    const foto = fotos[idx]
     await run(
-      'INSERT INTO ctv_pdfs (nombre_tabla, id_tabla, ruta_base, ruta_logica, nombre_archivo, modifica_u) VALUES (?, ?, ?, ?, ?, ?)',
-      ['ctv_inspecciones', r.insertId, 'uploads/inspecciones', `uploads/inspecciones/${foto.filename}`, foto.filename, req.user!.email],
+      'INSERT INTO ctv_pdfs (nombre_tabla, id_tabla, ruta_base, ruta_logica, nombre_archivo, etiqueta, modifica_u) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      ['ctv_inspecciones', r.insertId, 'uploads/inspecciones', `uploads/inspecciones/${foto.filename}`, foto.filename, etiquetas[idx] ?? null, req.user!.email],
     )
   }
 
